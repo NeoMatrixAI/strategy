@@ -129,3 +129,22 @@ print("📉 Short candidates:", shorts)
 - The `df` is provided automatically by the system
 - You must return results as **lists**
 - For more complex strategies, you can build on the logic of this template
+
+
+---
+
+# 🛠 Sample config.py Template
+
+Here’s a minimal example of what your `config.py` should look like:
+
+```python
+# config.py
+
+hours = 12
+
+strategy_config = {
+    "maximum_candidates": 5,   # Select top 5 assets
+    "minutes": 60 * hours      # Look-back window: 12 hours
+}
+
+✅ strategy_config is automatically passed to your strategy function by the system.
