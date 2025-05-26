@@ -1,4 +1,5 @@
-# 📘 How to Implement Your Own Strategy
+# Strategy Guide
+## 📘 How to Implement Your Own Strategy
 
 This guide is designed for users who may not be familiar with coding. It provides a simple step-by-step explanation for building a custom strategy function. The example below is for reference, and users can develop their own logic by following the same structure.
 
