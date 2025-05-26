@@ -37,6 +37,14 @@ To use a strategy in this repository:
 
 Make sure you are also using the [nb-runner](https://github.com/NeoMatrixAI/nb-runner) repository, which contains the notebook runner and execution logic.
 
+---
+
+### 🧩 Want to Implement Your Own Strategy?
+
+We also provide a beginner-friendly guide on how to create your own strategy module and configuration.
+
+> 📘 See: [strategy_guide.md](./strategy/README.md) – A step-by-step tutorial on writing a custom `strategy()` function,  
+> including input/output formats, required structure, configuration tips, and example code.
 
 ---
 
