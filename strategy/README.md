@@ -1,4 +1,11 @@
 # Strategy Guide
+
+> 📚 This README is available in multiple languages:  
+> - 🇺🇸 English (default) — this file  
+> - 🇰🇷 [한국어](./README_KOR.md) 🇰🇷  
+> - 🇨🇳 [中文](./README_CHN.md) 🇨🇳
+---
+
 ## 📘 How to Implement Your Own Strategy
 
 This guide is designed for users who may not be familiar with coding. 
