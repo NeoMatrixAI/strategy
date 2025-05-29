@@ -1,5 +1,10 @@
 # strategy
 
+> 📚 This README is available in multiple languages:  
+> - 🇺🇸 English (default) — this file  
+> - 🇰🇷 [한국어](./README_KOR.md) 🇰🇷  
+> - 🇨🇳 [中文](./README_CHN.md) 🇨🇳  
+---
 This repository contains strategy modules and configuration files used by the [nb-runner](https://github.com/NeoMatrixAI/nb-runner) repository.
 
 ---
