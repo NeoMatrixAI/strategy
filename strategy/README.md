@@ -1,7 +1,8 @@
 # Strategy Guide
 ## 📘 How to Implement Your Own Strategy
 
-This guide is designed for users who may not be familiar with coding. It provides a simple step-by-step explanation for building a custom strategy function. The example below is for reference, and users can develop their own logic by following the same structure.
+This guide is designed for users who may not be familiar with coding. 
+It provides a simple step-by-step explanation for building a custom strategy function. The example below is for reference, and users can develop their own logic by following the same structure.
 
 ---
 
@@ -147,5 +148,6 @@ strategy_config = {
     "maximum_candidates": 5,   # Select top 5 assets
     "minutes": 60 * hours      # Look-back window: 12 hours
 }
+```
 
 ✅ strategy_config is automatically passed to your strategy function by the system.
