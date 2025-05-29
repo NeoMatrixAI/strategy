@@ -44,7 +44,7 @@ strategy/
 
 我们也提供了适合初学者的策略模块和配置编写指南。
 
-> 📘 详情请参见 [strategy_guide.md](./strategy/README.md) –  
+> 📘 详情请参见 [strategy_guide.md](./strategy/README_CHN.md) –  
 > 分步教程，介绍如何编写自定义 `strategy()` 函数，  
 > 包括输入/输出格式、必需结构、配置技巧及示例代码。
 
