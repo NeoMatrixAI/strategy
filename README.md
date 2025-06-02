@@ -55,4 +55,4 @@ We also provide a beginner-friendly guide on how to create your own strategy mod
 
 ### ❓ Support
 
-For questions or support, please reach out via the [**NeoMatrix Discord**](https://discord.gg/n6tMdrse)
+For questions or support, please reach out via the [**NeoMatrix Discord**](https://discord.gg/Xn26Q42DXD)
