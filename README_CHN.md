@@ -52,4 +52,4 @@ strategy/
 
 ### ❓ 支持
 
-如有问题或需要支持，请通过 [**NeoMatrix Discord**](https://discord.gg/n6tMdrse) 联系我们。
+如有问题或需要支持，请通过 [**NeoMatrix Discord**](https://discord.gg/Xn26Q42DXD) 联系我们。
