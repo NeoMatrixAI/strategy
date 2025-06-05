@@ -2,27 +2,30 @@ import pandas as pd
 
 def strategy(df, config_dict):
     """
-    Calculates momentum over multiple time periods (in minutes) for each stock in the given price data.
-    Returns the top and bottom ranked stocks based on their averaged momentum scores at the latest time point.
+    A user strategy function that calculates momentum over multiple time periods (minutes) 
+    and returns a ranking of the top and bottom stocks.
 
     Parameters:
-    - df (pd.DataFrame): Price time series data with datetime index and stock symbols as columns.
-    - config_dict (dict): User-defined settings dictionary, expected to contain:
-        - 'strategy_config': {
-            'minutes': list of integers representing time periods for momentum calculation,
-            'maximum_candidates': integer specifying how many top/bottom stocks to select
-          }
+    - df (pd.DataFrame): price time series data
+    - config_dict (dict): User defined settings (parsed from JSON string)
+      - Expected structure: {'strategy_config': {'minutes': [...], 'maximum_candidates': ...}}
 
     Returns:
-    - long_candidates (list): List of stock symbols with the highest momentum scores (buy candidates).
-    - short_candidates (list): List of stock symbols with the lowest momentum scores (sell candidates).
+    - long_candidates (pd.Series): Top N Stocks (Buy Candidates)
+    - short_candidates (pd.Series): Bottom N Stocks (Sell Candidates)
     """
 
     # Get settings
     strategy_specific_config = config_dict.get('strategy_config')
     
+    ############################################################################
+    # Users should define variables in this section to suit their strategy.
+    # example
+    # param_example_name = strategy_specific_config.get("param_example_name")
     periods = strategy_specific_config.get("minutes")
-    maximum_candidates = strategy_specific_config.get("maximum_candidates")
+    long_maximum_candidates = strategy_specific_config.get("long_maximum_candidates", 1)
+    short_maximum_candidates = strategy_specific_config.get("short_maximum_candidates", 1)
+    ############################################################################
 
     if not isinstance(df, pd.DataFrame):
         raise TypeError("Input must be a pandas DataFrame.")
@@ -45,7 +48,7 @@ def strategy(df, config_dict):
     ranked_df = momentum_scores.sort_values(ascending=False)
 
     # Extract top/bottom N
-    long_candidates = list(ranked_df.head(maximum_candidates).index)
-    short_candidates = list(ranked_df.tail(maximum_candidates).index)
+    long_candidates = list(ranked_df.head(long_maximum_candidates).index)
+    short_candidates = list(ranked_df.tail(short_maximum_candidates).index)
 
     return long_candidates, short_candidates

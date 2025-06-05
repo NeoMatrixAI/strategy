@@ -3,7 +3,7 @@
 # ==========================
 
 system_config = {
-    "data_apikey": "Input your Data API key", # CoinAPI - data api key
+    "data_apikey": "Input User Data Api Key", # CoinAPI - data api key
     "strategy_name": "multi_period_momentum", # User strategy file name
     "trading_hours": 336, # System run time
     "base_symbol": "BTCUSDT",
@@ -17,11 +17,15 @@ system_config = {
     "timeframe": "1min",
     "tradeType": "future", # demo / future
     "is_portfolio": True,   
-    "total_allocation": 0.80, # Proportion of total assets to use
+    "total_allocation": 1.0, # Proportion of total assets to use
     "leverage": 10, # Leverage
-    "weight": 1/3, # Proportion per symbol, must be sum 1
-    "new_data_window": 360, # The window value for fetching the latest data 
-                            # (preferably the maximum value of the strategy parameter)
+    "new_data_window": 60, # The window value for fetching the latest data (preferably the maximum value of the strategy parameter)
+    "weight_method": "custom", # equal, split(long/short), custom
+    "custom_weights": {
+        "BTCUSDT" : "0.5",
+        "ETHUSDT" : "0.3",
+        "XRPUSDT" : "0.2"
+    }    
 }
 
 # ==========================
@@ -29,8 +33,8 @@ system_config = {
 # ==========================
 
 rebalancing_config = {
-    "rebalancing_interval_hours": 72, # Rebalancing cycle (hours)
-    "minimum_candidates": 1
+    "rebalancing_interval_hours": 3, # Rebalancing cycle (hours)
+    "minimum_candidates": 0
 }
 
 
@@ -40,6 +44,7 @@ rebalancing_config = {
 
 hours = [1,3,6]
 strategy_config = {
-    "maximum_candidates": 1, # The number of items set must not exceed more than half
+    "long_maximum_candidates": 2,
+    "short_maximum_candidates": 1,
     "minutes": [int(i*60) for i in hours]
 }
