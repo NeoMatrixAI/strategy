@@ -5,7 +5,7 @@
 system_config = {
     "data_apikey": "Input User Data Api Key", # CoinAPI - data api key
     "strategy_name": "multi_period_momentum", # User strategy file name
-    "trading_hours": 336, # System run time
+    "trading_hours": 72, # System run time
     "base_symbol": "BTCUSDT",
     "symbols": ['BTCUSDT', 'ETHUSDT', 'XRPUSDT', 'BCHUSDT', 'LTCUSDT', 
                 'ADAUSDT', 'ETCUSDT', 'TRXUSDT', 'DOTUSDT', 'DOGEUSDT', 
@@ -28,13 +28,13 @@ system_config = {
     "marginCoin": "usdt",
     "orderType": "market",
     "timeframe": "1min",
-    "tradeType": "future", # demo / future
+    "tradeType": "future", # future
     "is_portfolio": True,   
     "total_allocation": 1.0, # Proportion of total assets to use
     "leverage": 10, # Leverage
     "new_data_window": 60, # The window value for fetching the latest data (preferably the maximum value of the strategy parameter)
     "weight_method": "custom", # equal, split(long/short), custom
-    "custom_weights": {
+    "custom_weights": {    # Required if weight_method is custom
         "BTCUSDT" : "0.5",
         "ETHUSDT" : "0.3",
         "XRPUSDT" : "0.2"
