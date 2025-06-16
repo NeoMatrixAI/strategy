@@ -69,6 +69,7 @@ Example layout:
 ## 🪄 Strategy Example: Simple Return-Based Strategy
 
 ```python
+# strategy.py
 import pandas as pd
 
 def strategy(df, config_dict):
@@ -93,7 +94,7 @@ def strategy(df, config_dict):
 
 ---
 
-## 🧱 Full Strategy Usage Structure (Including Config)
+## 🧱 Strategy Verify Test Example (Including Config)
 
 ```python
 # 1. config.py example
@@ -148,12 +149,67 @@ Here’s a minimal example of what your `config.py` should look like:
 
 ```python
 # config.py
+# ==========================
+# Required System Settings
+# ==========================
+
+system_config = {
+    "data_apikey": "Input User Data Api Key", # CoinAPI - data api key
+    "strategy_name": "multi_period_momentum", # User strategy file name
+    "trading_hours": 72, # System run time
+    "base_symbol": "BTCUSDT",
+    "symbols": ['BTCUSDT', 'ETHUSDT', 'XRPUSDT', 'BCHUSDT', 'LTCUSDT', 
+                'ADAUSDT', 'ETCUSDT', 'TRXUSDT', 'DOTUSDT', 'DOGEUSDT', 
+                'SOLUSDT', 'BNBUSDT', 'ICPUSDT', 'FILUSDT', 'XLMUSDT',
+                'ONTUSDT', 'QTUMUSDT', 'NKNUSDT', 'AVAXUSDT', 'CELOUSDT',
+                'WAXPUSDT', 'DYMUSDT', 'APTUSDT', 'FLOWUSDT', 'GTCUSDT',
+                'SEIUSDT', 'ATOMUSDT', 'NEARUSDT', 'STXUSDT', 'MINAUSDT',
+                'BSVUSDT', 'EGLDUSDT', 'RVNUSDT', 'ONEUSDT', 'NEOUSDT',
+                'JUPUSDT', 'ZILUSDT', 'XTZUSDT', 'LUNCUSDT', 'CKBUSDT',
+                'IOTAUSDT', 'THETAUSDT', 'ICXUSDT', 'ALGOUSDT', 'LSKUSDT', 
+                'CFXUSDT', 'TONUSDT', 'MEMEUSDT', 'SXPUSDT', 'KASUSDT',
+                'HBARUSDT', 'IOSTUSDT', 'BEAMUSDT', 'FETUSDT', 'XVGUSDT', 
+                'SUIUSDT', 'VETUSDT', 'KSMUSDT', 'ARBUSDT', 'ARUSDT', 
+                'RUNEUSDT', 'IOTXUSDT', 'TAIKOUSDT', 'COREUSDT', 'BBUSDT', 
+                'COTIUSDT', 'NTRNUSDT'], # List of all currently available symbols: define only the symbols you need as values.
+    "productType": "usdt-futures",
+    "posMode": "hedge_mode", # one_way_mode , hedge_mode
+    "marginMode": "crossed", # Margin mode: crossed (isolated requires holdSide in hedge_mode)
+    "holdSide": "long",      # Position direction: long (used only in isolated + hedge_mode)   
+    "marginCoin": "usdt",
+    "orderType": "market",
+    "timeframe": "1min",
+    "tradeType": "future",
+    "is_portfolio": True,   
+    "total_allocation": 1.0, # Proportion of total assets to use
+    "leverage": 10,          # Leverage
+    "new_data_window": 60,   # The window value for fetching the latest data (preferably the maximum value of the strategy parameter)
+    "weight_method": "custom", # equal(1/n), split(long: 0.5 --> 1/n | short: 0.5 --> 1/n), custom(custom_weights)
+    "custom_weights": {        # Required if weight_method is custom
+        "BTCUSDT" : "0.5",
+        "ETHUSDT" : "0.3",
+        "XRPUSDT" : "0.2"
+    }    
+}
+
+# ==========================
+# Rebalancing Trade Parameters
+# ==========================
+
+rebalancing_config = {
+    "rebalancing_interval_hours": 3, # Rebalancing cycle (hours)
+    "minimum_candidates": 0
+}
+
+
+# ==========================
+# Strategy Parameter Settings
+# ==========================
 
 hours = 12
-
 strategy_config = {
-    "maximum_candidates": 5,   # Select top 5 assets
-    "minutes": 60 * hours      # Look-back window: 12 hours
+    "maximum_candidates": 5,
+    "minutes": 60 * hours
 }
 ```
 

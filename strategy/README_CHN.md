@@ -61,6 +61,7 @@ longs, shorts = strategy.strategy(df, {'strategy_config': config.strategy_config
 ## 🪄 策略示例：基于简单收益率的策略
 
 ```python
+# strategy.py
 import pandas as pd
 
 def strategy(df, config_dict):
@@ -85,7 +86,7 @@ def strategy(df, config_dict):
 
 ---
 
-## 🧱 完整使用结构（包含配置）
+## 🧱 策略验证测试示例（包含配置）
 
 ```python
 # 1. config.py 示例
@@ -138,12 +139,66 @@ print("📉 空头候选:", shorts)
 
 ```python
 # config.py
+# ==========================
+# 系统必要设置
+# ==========================
+
+system_config = {
+    "data_apikey": "Input User Data Api Key", # CoinAPI - 数据 API 密钥
+    "strategy_name": "multi_period_momentum", # 用户策略文件名称
+    "trading_hours": 72, # 系统运行时间（单位：小时）
+    "base_symbol": "BTCUSDT", # 基准交易对
+    "symbols": ['BTCUSDT', 'ETHUSDT', 'XRPUSDT', 'BCHUSDT', 'LTCUSDT', 
+                'ADAUSDT', 'ETCUSDT', 'TRXUSDT', 'DOTUSDT', 'DOGEUSDT', 
+                'SOLUSDT', 'BNBUSDT', 'ICPUSDT', 'FILUSDT', 'XLMUSDT',
+                'ONTUSDT', 'QTUMUSDT', 'NKNUSDT', 'AVAXUSDT', 'CELOUSDT',
+                'WAXPUSDT', 'DYMUSDT', 'APTUSDT', 'FLOWUSDT', 'GTCUSDT',
+                'SEIUSDT', 'ATOMUSDT', 'NEARUSDT', 'STXUSDT', 'MINAUSDT',
+                'BSVUSDT', 'EGLDUSDT', 'RVNUSDT', 'ONEUSDT', 'NEOUSDT',
+                'JUPUSDT', 'ZILUSDT', 'XTZUSDT', 'LUNCUSDT', 'CKBUSDT',
+                'IOTAUSDT', 'THETAUSDT', 'ICXUSDT', 'ALGOUSDT', 'LSKUSDT', 
+                'CFXUSDT', 'TONUSDT', 'MEMEUSDT', 'SXPUSDT', 'KASUSDT',
+                'HBARUSDT', 'IOSTUSDT', 'BEAMUSDT', 'FETUSDT', 'XVGUSDT', 
+                'SUIUSDT', 'VETUSDT', 'KSMUSDT', 'ARBUSDT', 'ARUSDT', 
+                'RUNEUSDT', 'IOTXUSDT', 'TAIKOUSDT', 'COREUSDT', 'BBUSDT', 
+                'COTIUSDT', 'NTRNUSDT'], # 当前支持的交易对列表：仅填写需要的交易对
+    "productType": "usdt-futures", # 产品类型：USDT合约
+    "posMode": "hedge_mode", # 持仓模式：one_way_mode（单向）或 hedge_mode（双向）
+    "marginMode": "crossed", # 保证金模式：全仓（hedge_mode + isolated时必须指定 holdSide）
+    "holdSide": "long",      # 持仓方向：long 或 short（仅在 isolated + hedge_mode 模式下使用）
+    "marginCoin": "usdt",    # 保证金币种
+    "orderType": "market",   # 订单类型：市价单
+    "timeframe": "1min",     # K线周期
+    "tradeType": "future",   # 交易类型：合约
+    "is_portfolio": True,    # 是否使用投资组合方式交易
+    "total_allocation": 1.0, # 使用的总资金比例（0~1之间）
+    "leverage": 10,          # 杠杆倍数
+    "new_data_window": 60,   # 获取最新数据的时间窗口（建议设为策略参数的最大值）
+    "weight_method": "custom", # 权重分配方式：equal、split 或 custom
+    "custom_weights": {         # 当 weight_method 为 custom 时必须填写
+        "BTCUSDT" : "0.5",
+        "ETHUSDT" : "0.3",
+        "XRPUSDT" : "0.2"
+    }    
+}
+
+# ==========================
+# 调仓参数设置
+# ==========================
+
+rebalancing_config = {
+    "rebalancing_interval_hours": 3, # 调仓周期（小时）
+    "minimum_candidates": 0          # 最少选中交易对数量
+}
+
+# ==========================
+# 策略参数设置
+# ==========================
 
 hours = 12
-
 strategy_config = {
-    "maximum_candidates": 5,   # 选出前 5 名资产
-    "minutes": 60 * hours      # 回看窗口长度：12 小时
+    "maximum_candidates": 5, # 最多选中交易对数量
+    "minutes": 60 * hours    # 策略运行时间（分钟）
 }
 ```
 

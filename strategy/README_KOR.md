@@ -62,6 +62,7 @@ longs, shorts = strategy.strategy(df, {'strategy_config': config.strategy_config
 ## 🪄 전략 예시: 단순 수익률 기반 전략
 
 ```python
+# strategy.py
 import pandas as pd
 
 def strategy(df, config_dict):
@@ -86,7 +87,7 @@ def strategy(df, config_dict):
 
 ---
 
-## 🧱 전체 구성 예시 (Config 포함)
+## 🧱 전략 검증 테스트 예시 (Config 포함)
 
 ```python
 # 1. config.py 예시
@@ -133,16 +134,70 @@ print("📉 Short 종목:", shorts)
 
 ---
 
-## 🛠 config.py 예시 템플릿
+## 🛠 config.py 전체 예시 템플릿
 
 ```python
 # config.py
+# ==========================
+# 필수 시스템 설정
+# ==========================
+
+system_config = {
+    "data_apikey": "Input User Data Api Key", # CoinAPI - 데이터 API 키 입력
+    "strategy_name": "multi_period_momentum", # 사용자 전략 파일 이름
+    "trading_hours": 72, # 시스템 실행 시간 (단위: 시간)
+    "base_symbol": "BTCUSDT", # 기준 종목
+    "symbols": ['BTCUSDT', 'ETHUSDT', 'XRPUSDT', 'BCHUSDT', 'LTCUSDT', 
+                'ADAUSDT', 'ETCUSDT', 'TRXUSDT', 'DOTUSDT', 'DOGEUSDT', 
+                'SOLUSDT', 'BNBUSDT', 'ICPUSDT', 'FILUSDT', 'XLMUSDT',
+                'ONTUSDT', 'QTUMUSDT', 'NKNUSDT', 'AVAXUSDT', 'CELOUSDT',
+                'WAXPUSDT', 'DYMUSDT', 'APTUSDT', 'FLOWUSDT', 'GTCUSDT',
+                'SEIUSDT', 'ATOMUSDT', 'NEARUSDT', 'STXUSDT', 'MINAUSDT',
+                'BSVUSDT', 'EGLDUSDT', 'RVNUSDT', 'ONEUSDT', 'NEOUSDT',
+                'JUPUSDT', 'ZILUSDT', 'XTZUSDT', 'LUNCUSDT', 'CKBUSDT',
+                'IOTAUSDT', 'THETAUSDT', 'ICXUSDT', 'ALGOUSDT', 'LSKUSDT', 
+                'CFXUSDT', 'TONUSDT', 'MEMEUSDT', 'SXPUSDT', 'KASUSDT',
+                'HBARUSDT', 'IOSTUSDT', 'BEAMUSDT', 'FETUSDT', 'XVGUSDT', 
+                'SUIUSDT', 'VETUSDT', 'KSMUSDT', 'ARBUSDT', 'ARUSDT', 
+                'RUNEUSDT', 'IOTXUSDT', 'TAIKOUSDT', 'COREUSDT', 'BBUSDT', 
+                'COTIUSDT', 'NTRNUSDT'], # 사용 가능한 전체 종목 리스트 중 필요한 종목만 선택
+    "productType": "usdt-futures", # 상품 종류 (USDT 선물)
+    "posMode": "hedge_mode", # 포지션 모드: one_way_mode(단방향), hedge_mode(양방향)
+    "marginMode": "crossed", # 마진 모드: 교차마진 (hedge_mode + isolated일 때만 holdSide 필요)
+    "holdSide": "long",      # 포지션 방향: long 또는 short (isolated + hedge_mode일 때만 사용됨)   
+    "marginCoin": "usdt",    # 마진으로 사용할 코인
+    "orderType": "market",   # 주문 유형: 시장가 주문
+    "timeframe": "1min",     # 캔들 타임프레임
+    "tradeType": "future",   # 거래 종류: 선물
+    "is_portfolio": True,    # 포트폴리오 거래 여부
+    "total_allocation": 1.0, # 총 자산 중 사용할 비율 (0~1)
+    "leverage": 10,          # 레버리지 설정
+    "new_data_window": 60,   # 최신 데이터 수집 윈도우 (전략 파라미터의 최대값에 맞추는 것이 좋음)
+    "weight_method": "custom", # 종목별 비중 계산 방식: equal, split, custom 중 선택
+    "custom_weights": {        # weight_method가 custom일 때 필수
+        "BTCUSDT" : "0.5",
+        "ETHUSDT" : "0.3",
+        "XRPUSDT" : "0.2"
+    }    
+}
+
+# ==========================
+# 리밸런싱 트레이딩 설정
+# ==========================
+
+rebalancing_config = {
+    "rebalancing_interval_hours": 3, # 리밸런싱 주기 (단위: 시간)
+    "minimum_candidates": 0          # 리밸런싱 시 최소 종목 수
+}
+
+# ==========================
+# 전략 파라미터 설정
+# ==========================
 
 hours = 12
-
 strategy_config = {
-    "maximum_candidates": 5,
-    "minutes": 60 * hours
+    "maximum_candidates": 5, # 최대 선택 종목 수
+    "minutes": 60 * hours    # 전략 실행 시간 (분 단위)
 }
 ```
 
