@@ -13,7 +13,7 @@
 示例：
 
 ```
-strategy/
+strategy/{future/spot}
 └── momentum_v1/
 ├── momentum_v1.py
 └── momentum_v1_config.py
@@ -42,11 +42,13 @@ strategy/
 
 ### 🧩 想自己实现策略？
 
-我们也提供了适合初学者的策略模块和配置编写指南。
+我们还提供现货和期货策略模块的创建和设置指南，即使是初学者也可以轻松上手。
 
-> 📘 详情请参见 [strategy_guide.md](./strategy/README_CHN.md) –  
-> 分步教程，介绍如何编写自定义 `strategy()` 函数，  
-> 包括输入/输出格式、必需结构、配置技巧及示例代码。
+- 📘 更多信息，请参阅以下每种交易类型的指南。
+  - [现货策略指南](./strategy/spot/README_CHN.md)
+  - [期货策略指南](./strategy/future/README_CHN.md)
+
+> 逐步讲解 `strategy()` 函数的编写方法、输入/输出格式、所需结构、设置方法以及示例代码。
 
 ---
 

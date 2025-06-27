@@ -18,7 +18,7 @@ Each strategy is organized in its own folder and includes:
 Example:
 
 ```
-strategy/
+strategy/{future/spot}
 └── momentum_v1/
     ├── momentum_v1.py
     └── momentum_v1_config.py
@@ -46,10 +46,13 @@ Make sure you are also using the [nb-runner](https://github.com/NeoMatrixAI/nb-r
 
 ### 🧩 Want to Implement Your Own Strategy?
 
-We also provide a beginner-friendly guide on how to create your own strategy module and configuration.
+We also provide guides for creating spot and futures strategy modules and settings that even beginners can easily follow.
 
-> 📘 See: [strategy_guide.md](./strategy/README.md) – A step-by-step tutorial on writing a custom `strategy()` function,  
-> including input/output formats, required structure, configuration tips, and example code.
+- 📘 For more information, please refer to the guides for each trading type below.
+  - [Spot Strategy Guide](./strategy/spot/README.md)
+  - [Futures Strategy Guide](./strategy/future/README.md)
+
+> The `strategy()` function writing method, input/output format, required structure, setup method, and example code are explained step by step.
 
 ---
 
