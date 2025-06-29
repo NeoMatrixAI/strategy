@@ -4,14 +4,14 @@
 from dotenv import load_dotenv
 import os
 
-dotenv_path = os.path.abspath(os.path.join(__file__, "../../../../module/.env"))
+dotenv_path = os.path.abspath(os.path.join(__file__, ".env"))
 load_dotenv(dotenv_path)
 DATA_KEY = os.getenv("DATA_KEY")
 
 system_config = {
-    "data_apikey": DATA_KEY, # CoinAPI - data api key
+    "data_apikey": DATA_KEY,
     "strategy_name": "multi_period_momentum", # User strategy file name
-    "trading_hours": 6, # System run time
+    "trading_hours": 12, # System run time
     "base_symbol": "BTCUSDT",
     "symbols": ['BTCUSDT', 'ETHUSDT', 'XRPUSDT', 'BCHUSDT', 'LTCUSDT', 'ADAUSDT', 'ETCUSDT', 'TRXUSDT', 'DOTUSDT', 'DOGEUSDT'], # List of symbols to use
     "productType": "usdt-futures",
@@ -46,7 +46,7 @@ system_config = {
 # ==========================
 
 rebalancing_config = {
-    "rebalancing_interval_hours": 3, # Rebalancing cycle (hours)
+    "rebalancing_interval_hours": 6, # Rebalancing cycle (hours)
     "minimum_candidates": 0
 }
 
