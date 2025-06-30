@@ -4,12 +4,8 @@
 from dotenv import load_dotenv
 import os
 
-dotenv_path = os.path.abspath(os.path.join(__file__, ".env"))
-load_dotenv(dotenv_path)
-DATA_KEY = os.getenv("DATA_KEY")
-
 system_config = {
-    "data_apikey": DATA_KEY,
+    "data_apikey": "a71eaf04-802f-40be-93c2-5bee2548f4db",
     "strategy_name": "multi_period_momentum", # User strategy file name
     "trading_hours": 12, # System run time
     "base_symbol": "BTCUSDT",
