@@ -17,7 +17,7 @@ system_config = {
     "marginCoin": "usdt",
     "orderType": "market",
     "timeframe": "1min",
-    "tradeType": "future",
+    "tradeType": "futures",
     "is_portfolio": True,   
     "total_allocation": 0.95, # Proportion of total assets to use
     "leverage": 10, # Leverage
@@ -42,7 +42,7 @@ system_config = {
 # ==========================
 
 rebalancing_config = {
-    "rebalancing_interval_hours": 6, # Rebalancing cycle (hours)
+    "rebalancing_interval_hours": 3, # Rebalancing cycle (hours)
     "minimum_candidates": 0
 }
 
