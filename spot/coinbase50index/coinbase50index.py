@@ -70,4 +70,4 @@ def strategy(df, config_dict):
         # 'ROSEUSDT': '0.0001'
     }
 
-    return symbol_weight|
+    return symbol_weight
