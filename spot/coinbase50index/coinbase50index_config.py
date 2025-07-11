@@ -10,11 +10,12 @@ system_config = {
     "symbols": ['BTCUSDT', 'ETHUSDT', 'XRPUSDT', 'SOLUSDT', 'DOGEUSDT', 'ADAUSDT', 'BCHUSDT', 'XLMUSDT', 'AVAXUSDT', 'LTCUSDT', 'DOTUSDT', 'APTUSDT', 'ICPUSDT', 'NEARUSDT', 'ETCUSDT', 'FETUSDT', 'ATOMUSDT', 'ALGOUSDT', 'STXUSDT', 'XTZUSDT'],
     "orderType": "market",
     "timeframe": "1min",
-    "tradeType": "future",
+    "tradeType": "spot",
     "is_portfolio": True,
     "total_allocation": 0.90,
     "new_data_window": 5,
-    "batchMode": 'multiple'
+    "batchMode": 'multiple',
+    "sizeMode": 'ratio', # ratio / size
 }
 
 # ==========================

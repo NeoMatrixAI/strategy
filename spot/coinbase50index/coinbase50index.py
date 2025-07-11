@@ -13,6 +13,8 @@ def strategy(df, config_dict):
     if not isinstance(df, pd.DataFrame):
         raise TypeError("Input must be a pandas DataFrame.")
 
+    result = {}
+
     symbol_weight = {
         # | Announcement | Implementation |
         # | ------------ | -------------- |
@@ -70,4 +72,13 @@ def strategy(df, config_dict):
         # 'ROSEUSDT': '0.0001'
     }
 
-    return symbol_weight
+    for symbol, weight in symbol_weight.items():
+        result[symbol] = {
+            "size": str(weight),
+            "presetTakeProfitPrice": "null",
+            "executeTakeProfitPrice": "null",
+            "presetStopLossPrice": "null",
+            "executeStopLossPrice": "null"
+        }
+
+    return result
