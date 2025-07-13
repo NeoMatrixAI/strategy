@@ -7,7 +7,7 @@ import os
 system_config = {
     "data_apikey": "a71eaf04-802f-40be-93c2-5bee2548f4db",
     "strategy_name": "multi_period_momentum", # User strategy file name
-    "trading_hours": 12, # System run time
+    "trading_hours": 1, # System run time
     "base_symbol": "BTCUSDT",
     "symbols": ['BTCUSDT', 'ETHUSDT', 'XRPUSDT', 'BCHUSDT', 'LTCUSDT', 'ADAUSDT', 'ETCUSDT', 'TRXUSDT', 'DOTUSDT', 'DOGEUSDT'], # List of symbols to use
     "productType": "usdt-futures",
@@ -42,7 +42,7 @@ system_config = {
 # ==========================
 
 rebalancing_config = {
-    "rebalancing_interval_hours": 3, # Rebalancing cycle (hours)
+    "rebalancing_interval_hours": 1/12, # Rebalancing cycle (hours)
     "minimum_candidates": 0
 }
 
