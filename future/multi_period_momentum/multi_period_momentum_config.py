@@ -9,7 +9,7 @@ system_config = {
     "strategy_name": "multi_period_momentum", # User strategy file name
     "trading_hours": 1, # System run time
     "base_symbol": "BTCUSDT",
-    "symbols": ['BTCUSDT', 'ETHUSDT', 'XRPUSDT', 'BCHUSDT', 'LTCUSDT', 'ADAUSDT', 'ETCUSDT', 'TRXUSDT', 'DOTUSDT', 'DOGEUSDT'], # List of symbols to use
+    "symbols": ['BTCUSDT', 'ETHUSDT'], # List of symbols to use
     "productType": "usdt-futures",
     "posMode": "hedge_mode", # one_way_mode , hedge_mode
     "marginMode": "crossed", # isolated
@@ -25,9 +25,7 @@ system_config = {
     "weight_method": "custom", # 가중치 메소드 - equal, split(long/short), custom
     "custom_weights": { # 예시
         'BTCUSDT': 0.5,
-        'ETHUSDT': 0.2,
-        'XRPUSDT': 0.2,
-        'BCHUSDT': 0.1
+        'ETHUSDT': 0.5
     }
 }
 
@@ -47,7 +45,7 @@ rebalancing_config = {
 
 hours = [1,2,3]
 strategy_config = {
-    "long_maximum_candidates": 2,
-    "short_maximum_candidates": 2,
+    "long_maximum_candidates": 1,
+    "short_maximum_candidates": 1,
     "minutes": [int(i*60) for i in hours]
 }
