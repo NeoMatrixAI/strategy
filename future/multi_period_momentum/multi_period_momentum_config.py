@@ -26,14 +26,8 @@ system_config = {
     "custom_weights": { # 예시
         'BTCUSDT': 0.5,
         'ETHUSDT': 0.2,
-        'XRPUSDT': 0.1,
-        'BCHUSDT': 0.04,
-        'LTCUSDT': 0.04,
-        'ADAUSDT': 0.03,
-        'ETCUSDT': 0.03,
-        'TRXUSDT': 0.03,
-        'DOTUSDT': 0.02,
-        'DOGEUSDT': 0.01
+        'XRPUSDT': 0.2,
+        'BCHUSDT': 0.1
     }
 }
 
@@ -53,7 +47,7 @@ rebalancing_config = {
 
 hours = [1,2,3]
 strategy_config = {
-    "long_maximum_candidates": 5,
-    "short_maximum_candidates": 5,
+    "long_maximum_candidates": 2,
+    "short_maximum_candidates": 2,
     "minutes": [int(i*60) for i in hours]
 }
