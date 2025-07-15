@@ -1,9 +1,9 @@
-# strategy
+# Strategy
 
-> 📚 This README is available in multiple languages:  
-> - 🇺🇸 English (default) — this file  
-> - 🇰🇷 [한국어](./README_KOR.md) 🇰🇷  
-> - 🇨🇳 [中文](./README_CHN.md) 🇨🇳  
+[![Discord](https://img.shields.io/badge/Discord-2319DC)](https://discord.com/invite/Xn26Q42DXD)[![NeoMatrix](https://img.shields.io/badge/Neomatrix.com-white)](https://discord.com/invite/Xn26Q42DXD)
+---
+[![English](https://img.shields.io/badge/docs-English-blue)](./README.md) [![한국어](https://img.shields.io/badge/docs-한국어-red)](./docs/README_ko.md)
+[![简体中文](https://img.shields.io/badge/docs-简体中文-yellow)](./docs/README.zh-CN.md)
 ---
 This repository contains strategy modules and configuration files used by the [nb-runner](https://github.com/NeoMatrixAI/nb-runner) repository.
 
@@ -18,7 +18,7 @@ Each strategy is organized in its own folder and includes:
 Example:
 
 ```
-strategy/{future/spot}
+strategy/{futures/spot}
 └── momentum_v1/
     ├── momentum_v1.py
     └── momentum_v1_config.py
@@ -49,8 +49,8 @@ Make sure you are also using the [nb-runner](https://github.com/NeoMatrixAI/nb-r
 We also provide guides for creating spot and futures strategy modules and settings that even beginners can easily follow.
 
 - 📘 For more information, please refer to the guides for each trading type below.
-  - [Spot Strategy Guide](./strategy/spot/README.md)
-  - [Futures Strategy Guide](./strategy/future/README.md)
+  - [Spot Strategy Guide](./spot/README.md)
+  - [Futures Strategy Guide](./futures/README.md)
 
 > The `strategy()` function writing method, input/output format, required structure, setup method, and example code are explained step by step.
 
