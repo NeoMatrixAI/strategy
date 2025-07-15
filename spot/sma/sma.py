@@ -13,10 +13,10 @@ def strategy(df: pd.DataFrame, config_dict: dict) -> dict:
     if not isinstance(df, pd.DataFrame):
         raise TypeError("Input must be a pandas DataFrame.")
 
-    sma_short_period = strategy_specific_config.get("sma_short", 5)
-    sma_long_period = strategy_specific_config.get("sma_long", 20)
-    take_profit_ratio = strategy_specific_config.get("take_profit_ratio", 0.01)  # +1%
-    stop_loss_ratio = strategy_specific_config.get("stop_loss_ratio", 0.005)     # -0.5%
+    sma_short_period = strategy_specific_config.get("sma_short")
+    sma_long_period = strategy_specific_config.get("sma_long")
+    take_profit_ratio = strategy_specific_config.get("take_profit_ratio")
+    stop_loss_ratio = strategy_specific_config.get("stop_loss_ratio")
 
     result = {}
     symbols = df.columns.drop('datetime')
