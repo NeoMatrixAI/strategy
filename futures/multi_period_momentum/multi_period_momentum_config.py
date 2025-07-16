@@ -1,7 +1,6 @@
 # ==========================
 # Required System Settings
 # ==========================
-from dotenv import load_dotenv
 import os
 
 system_config = {
