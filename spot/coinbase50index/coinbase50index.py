@@ -20,7 +20,7 @@ def strategy(df, config_dict):
         # | ------------ | -------------- |
         # | 25/08/26     | 25/08/29       |
         ################################ 
-        # Symbols with annotations are not currently supported by the Data API, so their prices are included in BTCUSDT.
+        # Symbols with annotations are not currently supported by the Our Data API, so their prices are included in BTCUSDT.
         'BTCUSDT': '0.5461', # Origin BTCUSDT : 0.5109
         'ETHUSDT': '0.2274',
         'XRPUSDT': '0.0951',
@@ -75,10 +75,10 @@ def strategy(df, config_dict):
     for symbol, weight in symbol_weight.items():
         result[symbol] = {
             "size": str(weight),
-            "presetTakeProfitPrice": "null",
-            "executeTakeProfitPrice": "null",
-            "presetStopLossPrice": "null",
-            "executeStopLossPrice": "null"
+            "presetTakeProfitPrice": 1,
+            "executeTakeProfitPrice": 2,
+            "presetStopLossPrice": 3,
+            "executeStopLossPrice": 4
         }
 
     return result
