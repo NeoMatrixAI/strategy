@@ -6,6 +6,7 @@ system_config = {
     "data_apikey": "~~~~~~~~~~~~~~~~~~~~~~~~~~~~", # Input your Data API Key
     "strategy_name": "coinbase50index", # Strategy name
     "trading_hours": 336, # Time to execute auto-trading
+    "symbols": ['BTCUSDT', 'ETHUSDT', 'XRPUSDT', 'SOLUSDT', 'DOGEUSDT', 'ADAUSDT'], # Sets the list of symbols to execute for the strategy. May not be used depending on the strategy (e.g. index trading).
     "quoteCoin": "USDT", # Quote coin
     "orderType": "market", # Set order type : "market" or "limit"
     "timeframe": "1min", # Set data frequency : "1min", "5min", "15min"

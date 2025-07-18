@@ -75,10 +75,10 @@ def strategy(df, config_dict):
     for symbol, weight in symbol_weight.items():
         result[symbol] = {
             "size": str(weight),
-            "presetTakeProfitPrice": 1,
-            "executeTakeProfitPrice": 2,
-            "presetStopLossPrice": 3,
-            "executeStopLossPrice": 4
+            "presetTakeProfitPrice": None,
+            "executeTakeProfitPrice": None,
+            "presetStopLossPrice": None,
+            "executeStopLossPrice": None
         }
 
     return result
