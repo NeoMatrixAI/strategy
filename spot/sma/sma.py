@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import talib
 
 def strategy(df: pd.DataFrame, config_dict: dict) -> dict:
     """
@@ -18,18 +19,15 @@ def strategy(df: pd.DataFrame, config_dict: dict) -> dict:
     stop_loss_ratio = strategy_specific_config.get("stop_loss_ratio")
 
     result = {}
-    symbols = df.columns.drop('datetime')
+    symbols = df.columns
     df = df.copy()
-    df.set_index('datetime', inplace=True)
 
     for symbol in symbols:
         close = df[symbol].astype(float)
-        
-        # Calculate SMA manually
-        sma_short = close.rolling(window=sma_short_period).mean()
-        sma_long = close.rolling(window=sma_long_period).mean()
+        sma_short = talib.SMA(close, timeperiod=sma_short_period)
+        sma_long = talib.SMA(close, timeperiod=sma_long_period)
 
-        # 유효 데이터 확인 (Check for valid data)
+        # 유효 데이터 확인
         if len(close) < max(sma_short_period, sma_long_period) + 1:
             continue
         if np.isnan(sma_short.iloc[-1]) or np.isnan(sma_long.iloc[-1]):
@@ -41,7 +39,7 @@ def strategy(df: pd.DataFrame, config_dict: dict) -> dict:
         curr_long = sma_long.iloc[-1]
         price = close.iloc[-1]
 
-        # 매수/매도 신호 판별 (Determine buy/sell signal)
+        # 매수/매도 신호 판별
         signal = None
         if prev_short < prev_long and curr_short > curr_long:
             signal = 'buy'
