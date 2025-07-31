@@ -19,7 +19,7 @@ system_config = {
     "tradeType": "futures",
     "is_portfolio": True,   
     "total_allocation": 0.95, # Proportion of total assets to use
-    "leverage": 10, # Leverage
+    "leverage": 3, # Leverage
     "new_data_window": 72, # The window value for fetching the latest data (preferably the maximum value of the strategy parameter)
     "weight_method": "custom", # 가중치 메소드 - equal, split(long/short), custom
     "custom_weights": { # 예시
