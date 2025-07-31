@@ -21,7 +21,9 @@ system_config = {
     "total_allocation": 0.95, # Proportion of total assets to use
     "leverage": 3, # Leverage
     "new_data_window": 72, # The window value for fetching the latest data (preferably the maximum value of the strategy parameter)
-    "weight_method": "custom", # 가중치 메소드 - equal, split(long/short), custom
+    "weight_method": "custom", # Weight method(equal, split, custom)  "equal" : Full equal split
+                                                                    # "split" : After splitting spot/futures in half(spot:0.5 , futures:0.5), equal ratio
+                                                                    # "custom" : User custom ratio
     "custom_weights": { # 예시
         'BTCUSDT': 0.5,
         'ETHUSDT': 0.5
