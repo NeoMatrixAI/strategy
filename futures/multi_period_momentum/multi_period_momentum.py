@@ -8,11 +8,20 @@ def strategy(df, config_dict):
     Parameters:
     - df (pd.DataFrame): price time series data
     - config_dict (dict): User defined settings (parsed from JSON string)
-      - Expected structure: {'strategy_config': {'minutes': [...], 'maximum_candidates': ...}}
+      - Expected structure: 
+        {
+          'strategy_config': {
+            'minutes': [...], 
+            'long_minimum_candidates': ...,
+            'long_maximum_candidates': ...,
+            'short_minimum_candidates': ...,
+            'short_maximum_candidates': ...
+          }
+        }
 
     Returns:
-    - long_candidates (pd.Series): Top N Stocks (Buy Candidates)
-    - short_candidates (pd.Series): Bottom N Stocks (Sell Candidates)
+    - long_candidates (list): Top N Stocks (Buy Candidates)
+    - short_candidates (list): Bottom N Stocks (Sell Candidates)
     """
 
     # Get settings
@@ -23,7 +32,9 @@ def strategy(df, config_dict):
     # example
     # param_example_name = strategy_specific_config.get("param_example_name")
     periods = strategy_specific_config.get("minutes")
+    long_minimum_candidates = strategy_specific_config.get("long_minimum_candidates", 1)
     long_maximum_candidates = strategy_specific_config.get("long_maximum_candidates", 1)
+    short_minimum_candidates = strategy_specific_config.get("short_minimum_candidates", 1)
     short_maximum_candidates = strategy_specific_config.get("short_maximum_candidates", 1)
     ############################################################################
 
@@ -47,8 +58,23 @@ def strategy(df, config_dict):
     momentum_scores = momentum.iloc[-1]
     ranked_df = momentum_scores.sort_values(ascending=False)
 
-    # Extract top/bottom N
-    long_candidates = list(ranked_df.head(long_maximum_candidates).index)
-    short_candidates = list(ranked_df.tail(short_maximum_candidates).index)
+    # --- Long candidates ---
+    long_candidates = ranked_df.head(long_maximum_candidates).index.tolist()
+
+    # --- Short candidates (not overlapping with Long) ---
+    short_candidates = ranked_df.tail(short_maximum_candidates).index.tolist()
+    short_candidates = [s for s in short_candidates if s not in long_candidates]
+
+    # --- Long minimum number guaranteed ---
+    if len(long_candidates) < long_minimum_candidates:
+        extra_needed = long_minimum_candidates - len(long_candidates)
+        additional = [s for s in ranked_df.index if s not in long_candidates + short_candidates]
+        long_candidates += additional[:extra_needed]
+
+    # --- Short minimum number guaranteed ---
+    if len(short_candidates) < short_minimum_candidates:
+        extra_needed = short_minimum_candidates - len(short_candidates)
+        additional = [s for s in ranked_df.index if s not in long_candidates + short_candidates]
+        short_candidates += additional[-extra_needed:]
 
     return long_candidates, short_candidates
