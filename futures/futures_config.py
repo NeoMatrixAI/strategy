@@ -10,6 +10,10 @@ system_config = {
     "tradeType": "futures",
     "productType": "usdt-futures",
     "posMode": "hedge_mode", # 'hedge_mode', 'one_way_mode'
+    "holdSide": "long", # 1. When 'marginMode' is 'crossed' --> 'holdSide' is not required.
+                        # 2. When 'marginMode' is 'isolated' and 'posMode' is 'one_way_mode' --> 'holdSide' is not required.
+                        # 3. When 'marginMode' is 'isolated' and 'posMode' is 'hedge_mode' --> 'holdSide' must be specified (long or short).
+                          # 3-1. Exception: if both long and short leverages are set simultaneously in 'hedge mode', 'holdSide' is not required.
     "marginMode": "crossed", # 'crossed' or 'isolated'
     "marginCoin": "usdt",
     "orderType": "market",
@@ -35,3 +39,4 @@ system_config = {
 rebalancing_config = {
     "rebalancing_interval_hours": 1/6, # Rebalancing cycle (hours)
 }
+
