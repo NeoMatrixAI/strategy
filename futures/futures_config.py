@@ -3,21 +3,24 @@
 # ==========================
 system_config = {
     "data_apikey": "a71eaf04-802f-40be-93c2-5bee2548f4db", # Input your Data Api Key
-    "tz_str": "Asia/Seoul", # Select Time zone from "pytz.all_timezones"
-    "strategy_name": "multi_period_momentum", # Your strategy file name
-    "trading_hours": 1, # Autotrade system running time
-    "base_symbol": "BTCUSDT",
+    "tz_str": "Asia/Seoul", # Time zone (pytz.all_timezones)
     "tradeType": "futures",
-    "productType": "usdt-futures",
-    "marginMode": "crossed", # 'crossed' or 'isolated'
-    "posMode": "hedge_mode", # 'hedge_mode', 'one_way_mode'
-    "holdSide": "long", # default : long --> System default is required for leverage changes.
-    "marginCoin": "usdt",
-    "orderType": "market",
+    "strategy_name": "multi_period_momentum", # User strategy file name
+    "trading_hours": 9, # Time to execute AutoTrade
     "timeframe": "1min",
-    "total_allocation": 0.95, # Proportion of total assets to use
-    "leverage": 3, # select Leverage by your Level
-    "new_data_window": 200, # Window value to fetch recent data every minute (should be the maximum value of the strategy parameter value)
+    "orderType": "market",
+    "total_allocation": 0.50, # Percentage to allocate from total assets
+    "base_symbol": "BTCUSDT",
+    "productType": "usdt-futures",
+    "posMode": "hedge_mode", # 'hedge_mode', 'one_way_mode'
+    "holdSide": "long", # 1. When 'marginMode' is 'crossed' --> 'holdSide' is not required.
+                        # 2. When 'marginMode' is 'isolated' and 'posMode' is 'one_way_mode' --> 'holdSide' is not required.
+                        # 3. When 'marginMode' is 'isolated' and 'posMode' is 'hedge_mode' --> 'holdSide' must be specified (long or short).
+                          # 3-1. Exception: if both long and short leverages are set simultaneously in 'hedge mode', 'holdSide' is not required.
+    "marginMode": "crossed", # 'crossed' or 'isolated'
+    "marginCoin": "usdt",
+    "leverage": 3, # Leverage
+    "new_data_window": 4, # (hours) Window value to fetch recent data every minute (should be the maximum value of the strategy parameter value)
     "weight_method": "custom", # Weight method(equal, split, custom)  "equal" : Full equal split
                                                                     # "split" : After splitting spot/futures in half(spot:0.5 , futures:0.5), equal ratio 
                                                                     # "custom" : User custom ratio
@@ -30,11 +33,10 @@ system_config = {
     }
 }
 
+
 # ==========================
 # Rebalancing Trade Parameters
 # ==========================
 rebalancing_config = {
-    "rebalancing_interval_hours": 1/6, # Rebalancing cycle (hours)
+    "rebalancing_interval_hours": 1/2, # Rebalancing cycle (hours)
 }
-
-
