@@ -17,32 +17,37 @@ It provides a simple step-by-step explanation for building a custom strategy fun
 
 - Function name must be `strategy`
 - Function inputs: `df`, `config_dict`
-- Function outputs: `long_candidates`, `short_candidates` (both must be lists)
-- Configuration must be accessed like this:
+- Function outputs: a dictionary where each key is a symbol (e.g., "BTCUSDT") and the value contains the trade information as follows:
+```python
+"symbol" : {
+    "size": str(size),                     # Position size or ratio as a string
+    "presetTakeProfitPrice": str(preset_take),   # Pre-set take profit price
+    "executeTakeProfitPrice": str(execute_take), # Executed take profit price
+    "presetStopLossPrice": str(preset_stop),     # Pre-set stop loss price
+    "executeStopLossPrice": str(execute_stop)    # Executed stop loss price
+}
 
+```
+- Configuration must be accessed like this:
 ```python
 strategy_specific_config = config_dict.get('strategy_config')
 ```
 
-Your strategy settings must be defined in a file (e.g., `config.py`) as follows:
-
+Your strategy settings must be defined in a file (e.g., `strategy_config.py`) as follows:
 ```python
-# config.py example
-hours = 12  # Time intervals in hours
-
+# strategy-config.py example
 strategy_config = {
-    "maximum_candidates": 5,  # Number of long/short selections
-    "minutes": 60*hours  # Converted to minutes
-}
+        "parameter_1": 10,
+        "parameter_2": 30,
+        "parameter_3": 0.5
+        }
 ```
 
 > ⚠️ The system will wrap this `strategy_config` into a `config_dict` and pass it to the strategy like this:
 
 ```python
-longs, shorts = strategy.strategy(df, {'strategy_config': config.strategy_config})
+result = strategy.strategy(df, {'strategy_config': config.strategy_config})
 ```
-
-Users do **not** need to create `config_dict` manually—just call the strategy as shown.
 
 ---
 
@@ -66,70 +71,122 @@ Example layout:
 
 ---
 
-## 🪄 Strategy Example: Simple Return-Based Strategy
+## 🪄 Strategy Example: Simple SMA Strategy
 
 ```python
 # strategy.py
 import pandas as pd
 
-def strategy(df, config_dict):
+import pandas as pd
+import numpy as np
+
+def strategy(df: pd.DataFrame, config_dict: dict) -> dict:
     """
-    A very simple strategy that compares the latest price
-    to the price N minutes ago. It selects assets with the
-    highest and lowest returns.
+    SMA strategy for test
     """
+
+    # Get settings
     strategy_specific_config = config_dict.get('strategy_config')
+    
+    if not isinstance(df, pd.DataFrame):
+        raise TypeError("Input must be a pandas DataFrame.")
 
-    period = strategy_specific_config.get("minutes")[0]  # Use the first period only
-    maximum_candidates = strategy_specific_config.get("maximum_candidates")
+    sma_short_period = strategy_specific_config.get("sma_short")
+    sma_long_period = strategy_specific_config.get("sma_long")
+    take_profit_ratio = strategy_specific_config.get("take_profit_ratio")
+    stop_loss_ratio = strategy_specific_config.get("stop_loss_ratio")
 
-    returns = df.iloc[-1] / df.iloc[-period] - 1  # Calculate simple returns
-    sorted_returns = returns.sort_values(ascending=False)
+    result = {}
+    symbols = df.columns
+    df = df.copy()
 
-    long_candidates = list(sorted_returns.head(maximum_candidates).index)
-    short_candidates = list(sorted_returns.tail(maximum_candidates).index)
+    for symbol in symbols:
+        close = df[symbol].astype(float)
+        
+        # Calculate SMA manually
+        sma_short = close.rolling(window=sma_short_period).mean()
+        sma_long = close.rolling(window=sma_long_period).mean()
 
-    return long_candidates, short_candidates
+        # Check for valid data
+        if len(close) < max(sma_short_period, sma_long_period) + 1:
+            continue
+        if np.isnan(sma_short.iloc[-1]) or np.isnan(sma_long.iloc[-1]):
+            continue
+
+        prev_short = sma_short.iloc[-2]
+        prev_long = sma_long.iloc[-2]
+        curr_short = sma_short.iloc[-1]
+        curr_long = sma_long.iloc[-1]
+        price = close.iloc[-1]
+
+        # Determine buy/sell signal
+        signal = None
+        if prev_short < prev_long and curr_short > curr_long:
+            signal = 'buy'
+        elif prev_short > prev_long and curr_short < curr_long:
+            signal = 'sell'
+
+        if signal:
+            size = 1
+            if signal == 'buy':
+                entry_price = price
+                preset_take = round(entry_price * (1 + take_profit_ratio), 4)
+                execute_take = round(entry_price * (1 + take_profit_ratio * 0.9), 4)
+                preset_stop = round(entry_price * (1 - stop_loss_ratio), 4)
+                execute_stop = round(entry_price * (1 - stop_loss_ratio * 0.8), 4)
+            else:  # sell
+                entry_price = price
+                preset_take = round(entry_price * (1 - take_profit_ratio), 4)
+                execute_take = round(entry_price * (1 - take_profit_ratio * 0.9), 4)
+                preset_stop = round(entry_price * (1 + stop_loss_ratio), 4)
+                execute_stop = round(entry_price * (1 + stop_loss_ratio * 0.8), 4)
+
+            result[symbol] = {
+                "size": str(size),
+                "presetTakeProfitPrice": str(preset_take),
+                "executeTakeProfitPrice": str(execute_take),
+                "presetStopLossPrice": str(preset_stop),
+                "executeStopLossPrice": str(execute_stop)
+            }
+
+    return result
 ```
 
 ---
 
-## 🧱 Strategy Verify Test Example (Including Config)
+## 🧱 Strategy Verify Test Example
 
 ```python
-# 1. config.py example
-hours = 12  # Time intervals in hours
+# 1. strategy.py: Contains the strategy function above
 
+# 2. strategy-config.py
 strategy_config = {
-    "maximum_candidates": 5,  # Number of long/short selections
-    "minutes": 60*hours  # Converted to minutes
-}
+        "sma_short": 30,
+        "sma_long": 60,
+        "take_profit_ratio": 0.02,
+        "stop_loss_ratio": 0.01
+    }
 
-# 2. strategy.py: Contains the strategy function above
-
-# 3. How to run it (e.g., in main.py or Jupyter Notebook)
+# 3. verify-strategy.ipynb
 import strategy   # Your strategy file
 import config     # Your config file
 
-# df is the system-provided DataFrame of price data
-df = get_price_data_somehow()
-longs, shorts = strategy.strategy(df, {"strategy_config": config.strategy_config})
-
-# Print result
-print("📈 Long candidates:", longs)
-print("📉 Short candidates:", shorts)
+df = pd.read_csv('sample_data.csv')
+results = strategy.strategy(df, {"strategy_config": config.strategy_config})
 ```
 
----
-
-## ✅ Expected Output Format
-
-```python
-📈 Long candidates:
-['BTCUSDT', 'ETHUSDT', 'XRPUSDT']
-
-📉 Short candidates:
-['SOLUSDT', 'AVAXUSDT', 'DOGEUSDT']
+# ✅ Expected Output Format
+```
+{'BTCUSDT': {'size': '0.7',
+  'presetTakeProfitPrice': None,
+  'executeTakeProfitPrice': None,
+  'presetStopLossPrice': None,
+  'executeStopLossPrice': None},
+ 'ETHUSDT': {'size': '0.3',
+  'presetTakeProfitPrice': None,
+  'executeTakeProfitPrice': None,
+  'presetStopLossPrice': None,
+  'executeStopLossPrice': None}}
 ```
 
 ---
