@@ -22,7 +22,7 @@ system_config = {
     "leverage": 3, # Leverage
     "new_data_window": 4, # (hours) Window value to fetch recent data every minute (should be the maximum value of the strategy parameter value)
     "weight_method": "custom", # Weight method(equal, split, custom)  "equal" : Full equal split
-                                                                    # "split" : After splitting spot/futures in half(spot:0.5 , futures:0.5), equal ratio 
+                                                                    # "split" : After splitting long/short in half(spot:0.5 , futures:0.5), equal ratio 
                                                                     # "custom" : User custom ratio
     "symbols": ['BTCUSDT', 'ETHUSDT', 'XRPUSDT'], # Trade list of symbols to use
     "custom_weights": { # Applies only when weight_mode is "custom"  
