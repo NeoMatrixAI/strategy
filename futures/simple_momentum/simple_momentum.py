@@ -13,7 +13,7 @@ def strategy(config_dict):
     long_allocation_pct = strategy_specific_config.get("long_allocation_pct", 0.7)
     short_allocation_pct = strategy_specific_config.get("short_allocation_pct", 0.3)
     lookback = strategy_specific_config.get("lookback", 10)
-    data_apikey = "a71eaf04-802f-40be-93c2-5bee2548f4db"
+    data_apikey = "Input your Data API KEY"
 
     if long_allocation_pct + short_allocation_pct > 1.0:
         raise ValueError("Sum of long and short allocation percentages cannot exceed 1.0")
