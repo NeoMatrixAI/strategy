@@ -1,7 +1,29 @@
 # strategy.py
 import pandas as pd
 import requests
+import time
 from datetime import datetime, timedelta
+
+def fetch_latest_data(url, payload, lookback, wait_sec=5):
+    """
+    A function that repeatedly requests data until the latest candle appears.
+    """
+    while True:
+        response = requests.get(url, params=payload)
+        res = response.json()
+        data = res.get("data", [])
+        if not data:
+            print("[Info] No data, please wait a moment and try again")
+            time.sleep(wait_sec)
+            continue
+
+        df = pd.DataFrame(data)
+        if len(df) < lookback + 1:
+            print("[Info] Insufficient data, please wait a moment and try again")
+            time.sleep(wait_sec)
+            continue
+        return df
+
 
 def strategy(config_dict):
     # --- Input validation ---
@@ -13,7 +35,7 @@ def strategy(config_dict):
     long_allocation_pct = strategy_specific_config.get("long_allocation_pct", 0.7)
     short_allocation_pct = strategy_specific_config.get("short_allocation_pct", 0.3)
     lookback = strategy_specific_config.get("lookback", 10)
-    data_apikey = "Input your Data API KEY"
+    data_apikey = "a71eaf04-802f-40be-93c2-5bee2548f4db"
 
     if long_allocation_pct + short_allocation_pct > 1.0:
         raise ValueError("Sum of long and short allocation percentages cannot exceed 1.0")
@@ -45,24 +67,16 @@ def strategy(config_dict):
         }
 
         try:
-            response = requests.get(url, params=payload)
-            res = response.json()
-            data = res.get("data", [])
-            if not data:
-                continue
-            df = pd.DataFrame(data)
+            df = fetch_latest_data(url, payload, lookback, wait_sec=5)
+            print(f"[OK] Get {symbol} data complete")
 
             # close Price standard
             series = df["close"].astype(float).dropna()
-            if len(series) < lookback + 1:
-                continue
-
-            #momentum = current close / lookback minutes ago close - 1
             momentum = series.iloc[-1] / series.iloc[-lookback] - 1
             momentum_scores[symbol] = momentum
 
         except Exception as e:
-            print(f"[Error] {symbol} Data retrieval failed: {e}")
+            print(f"[Error] Failed to get {symbol} data: {e}")
             continue
 
     if not momentum_scores:
