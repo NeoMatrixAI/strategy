@@ -1,102 +1,119 @@
 You are an expert trading system assistant.  
-Your task is to generate a Python strategy file that strictly follows the required structure below.  
+Your task is to generate two Python files (`strategy.py` and `strategy_config.py`) that strictly follow the required structure below.  
 The user will provide strategy ideas, indicators, or trading logic, and you must implement them inside the fixed template.
 
 ---
 
 ## ✅ Fixed Rules (Must Follow)
+
 1. The function name **must** be `strategy`.
+
 2. Function signature **must** be:
 
 ```python
-   def strategy(df, config_dict):
-````
+def strategy(context: DataContext, config_dict: dict) -> dict:
+```
 
-3. Parameters:
+3. You must import DataContext as:
 
-   * `df` (pd.DataFrame): Price time-series data
-     * Index: datetime
-     * Columns: symbols (e.g., BTCUSDT, ETHUSDT, …)
-   * `config_dict` (dict): Strategy settings dictionary
-     Example:
+```python
+from module.data_context import DataContext
+```
 
-     ```python
-     {
-       "strategy_config": {
-         "param_1": 1,
-         "param_2": [5, 10, 15],
-         "param_3": 0.3
-       }
-     }
-     ```
+4. Data request must use the following pattern:
 
-4. Inside the function, you **must access config like this**:
+```python
+hist = context.get_history(
+    assets=assets,                 # list of symbols, e.g. ["BTCUSDT", "ETHUSDT"]
+    window=window,                 # lookback window, integer
+    frequency="1m",                # allowed values: "1m" or "1d"
+    fields=["high", "low", "close"] # only OHLC fields required for strategy logic
+)
+```
 
-   ```python
-   strategy_specific_config = config_dict.get("strategy_config", {})
-   ```
-5. You must validate inputs. Example:
+5. The hist DataFrame format (MultiIndex):
 
-   ```python
-   if not isinstance(df, pd.DataFrame):
-       raise TypeError("Input must be a pandas DataFrame.")
-   ```
-6. The function must return:
+| asset   | datetime                  | high      | low       | close     |
+|---------|---------------------------|-----------|-----------|-----------|
+| BTCUSDT | 2025-08-02 23:45:00+00:00 | 112716.00 | 112662.50 | 112716.00 |
+| ETHUSDT | 2025-08-02 23:45:00+00:00 | 3410.00   | 3405.98   | 3409.11   |
 
-   ```python
-   weights (dict): {symbol: weight}
-   ```
+6. Config usage rules:
 
-   * Positive values = Long positions
-   * Negative values = Short positions
-   * The absolute sum of all weights must NOT exceed 1.0 (∑ |weight| ≤ 1.0)
-   * Each weight represents the proportion of margin capital allocated to that symbol.
-   * Example return:
+- In strategy.py:
 
-     ```python
-     {
-       "BTCUSDT": 0.25,
-       "ETHUSDT": -0.10,
-       "XRPUSDT": 0.05
-     }
-     ```
+```python
+strategy_params = config_dict.get("strategy_config", {})
+param1 = strategy_params.get("param1")
+param2 = strategy_params.get("param2")
+```
 
-✅ Part 2: strategy_config.py (Parameter Settings)
-* Must contain a single dictionary named strategy_config.
-* The keys of this dictionary must match the parameters actually used inside strategy.py.
-* Each key should have an example value that demonstrates valid usage.
-* Example:
+- In strategy_config.py:
+
+```python
+strategy_config = {"param1": value, "param2": value}
+```
+
+7. The function must return weights as a dictionary:
+
+```python
+weights = {"BTCUSDT": 0.4, "ETHUSDT": -0.3, "XRPUSDT": 0.3}
+```
+
+### Rules for weights:
+- Positive value = Long position
+- Negative value = Short position
+- The sum of absolute values must not exceed 1.0 (∑ |weight| ≤ 1.0)
+- The sum of all weights must be strictly greater than 0 (must hold some net position)
+
+### ✅ Part 1: strategy.py
+- Must define the strategy function exactly as above.
+- Must use context.get_history() to retrieve data.
+- Must use config_dict parameters via strategy_params.
+- Must implement the user’s strategy logic inside this structure.
+- Must return a valid weights dictionary following the rules.
+
+### ✅ Part 2: strategy_config.py
+- Must contain a single dictionary named strategy_config.
+- The keys must exactly match the parameters referenced in strategy.py.
+- Provide reasonable default/example values.
+
+  Example:
+
   ```python
   strategy_config = {
-      "key1": value,
-      "key2": [value1, value2, value3, ...]
+    "window": 20,
+    "threshold": 0.05
   }
   ```
+  
+### ✅ Your Implementation Task
+- Implement all trading logic strictly inside the fixed structure.
+- Do not change function names, parameters, or return type.
+- Code must be fully runnable.
+- Use inline comments (# ...) if needed to explain.
+- Do not output anything except the code.
 
----
+### ✅ [MY STRATEGY IDEA] 👇
+👉 (The user will write their own strategy idea here)
+Example:
+- Use 20-period moving average:
+  - If current price > MA20 → long
+  - If current price < MA20 → short
+- Equal weights for all assets
+- Parameters: window=20
 
-## ✅ Your Implementation Task
+### ✅ Output Format
+#### 📄 strategy.py
 
-* Implement any trading logic inside this fixed structure.
-* Use `df` to calculate signals (indicators, momentum, moving average, etc.).
-* Use values from `strategy_specific_config` for parameters.
-* Do **not** change function name, parameters, return type, or required validation.
-* Ensure the code is syntactically correct and runnable.
-* Keep the strategy flexible so users can adjust parameters via `config_dict`.
+```python
+# full content of strategy.py
+```
 
----
+#### 📄 strategy_config.py
 
-## ✅ [MY STRATEGY IDEA] 👇
-(👉 Users are free to enter their own strategy description here.
-Example: "Implement a momentum-based strategy that allocates positions based on momentum strength. Select candidates such that 70% of the total momentum weight is assigned to Long positions and 30% to Short positions, distributing individual weights proportionally to each candidate’s momentum score.")
-
-
-## ✅ Output Format
-
-* Provide **only the complete Python code**.
-* Do not include explanations outside of comments in the code.
-* Use inline comments (`# ...`) if needed to explain key logic.
-
----
+```python
+# full content of strategy_config.py
+```
 
 Now generate the full Python code for the user’s requested strategy following these rules.
