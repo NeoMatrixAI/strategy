@@ -64,7 +64,7 @@ weights = {"BTCUSDT": 0.4, "ETHUSDT": -0.3, "XRPUSDT": 0.3}
 - Positive value = Long position
 - Negative value = Short position
 - The sum of absolute values must not exceed 1.0 (∑ |weight| ≤ 1.0)
-- The sum of all weights must be strictly greater than 0 (must hold some net position)
+- No position (all weights = 0) is also allowed.
 
 ### ✅ Part 1: strategy.py
 - Must define the strategy function exactly as above.
