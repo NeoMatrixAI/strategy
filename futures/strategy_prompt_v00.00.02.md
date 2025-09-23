@@ -64,6 +64,7 @@ weights = {"BTCUSDT": 0.4, "ETHUSDT": -0.3, "XRPUSDT": 0.3}
 - Positive value = Long position
 - Negative value = Short position
 - The sum of absolute values must not exceed 1.0 (∑ |weight| ≤ 1.0)
+- Each weight represents the proportion of margin capital allocated to that symbol.
 - No position (all weights = 0) is also allowed.
 
 ### ✅ Part 1: strategy.py
