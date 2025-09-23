@@ -27,7 +27,7 @@ hist = context.get_history(
     assets=assets,                 # list of symbols, e.g. ["BTCUSDT", "ETHUSDT"]
     window=window,                 # lookback window, integer
     frequency="1m",                # allowed values: "1m" or "1d"
-    fields=["high", "low", "close"] # only OHLC fields required for strategy logic
+    fields=["high", "low", "close"] # Only OHLCV fields are available in strategy logic, and multiple selections are allowed.
 )
 ```
 
@@ -42,6 +42,8 @@ hist = context.get_history(
 
 - In strategy.py:
 
+Example:
+
 ```python
 strategy_params = config_dict.get("strategy_config", {})
 param1 = strategy_params.get("param1")
@@ -49,12 +51,16 @@ param2 = strategy_params.get("param2")
 ```
 
 - In strategy_config.py:
+  
+Example:
 
 ```python
 strategy_config = {"param1": value, "param2": value}
 ```
 
 7. The function must return weights as a dictionary:
+
+Example:
 
 ```python
 weights = {"BTCUSDT": 0.4, "ETHUSDT": -0.3, "XRPUSDT": 0.3}
