@@ -1,38 +1,44 @@
-# strategy.py
+from module.data_context import DataContext
 import pandas as pd
-import numpy as np
 
-def strategy(df, config_dict):
-    # --- Input validation ---
-    if not isinstance(df, pd.DataFrame):
-        raise TypeError("Input must be a pandas DataFrame.")
-    if df.empty:
-        raise ValueError("Input DataFrame is empty.")
-    if not isinstance(config_dict, dict):
-        raise TypeError("config_dict must be a dictionary.")
-
+def strategy(context: DataContext, config_dict: dict) -> dict:
+    """
+    Momentum strategy with configurable long/short allocation.
+    """
     # --- Load strategy-specific config ---
-    strategy_specific_config = config_dict.get("strategy_config", {})
-    lookback = strategy_specific_config.get("lookback", 20)
-    long_allocation_pct = strategy_specific_config.get("long_allocation_pct", 0.7)
-    short_allocation_pct = strategy_specific_config.get("short_allocation_pct", 0.3)
-
+    strategy_params = config_dict.get("strategy_config", {})
+    assets = strategy_params.get("assets", [])
+    long_allocation_pct = strategy_params.get("long_allocation_pct", 0.7)
+    short_allocation_pct = strategy_params.get("short_allocation_pct", 0.3)
+    
     if long_allocation_pct + short_allocation_pct > 1.0:
         raise ValueError("Sum of long and short allocation percentages cannot exceed 1.0")
+
+    window = strategy_params.get("window", 20)
+
+    # --- Fetch historical data ---
+    hist = context.get_history(
+        assets=assets,
+        window=window,
+        frequency="1m",
+        fields=["close"]
+    )
+
+    # Pivot to get DataFrame: index=datetime, columns=asset
+    df = hist["close"].unstack(level=0)
 
     # --- Momentum calculation ---
     momentum_scores = {}
     for symbol in df.columns:
         series = df[symbol].dropna()
-        if len(series) < lookback + 1:
+        if len(series) < window + 1:
             continue
-        # momentum = current price / price lookback periods ago - 1
-        momentum = series.iloc[-1] / series.iloc[-lookback] - 1
+        momentum = series.iloc[-1] / series.iloc[-window] - 1
         momentum_scores[symbol] = momentum
 
     if not momentum_scores:
         return {}
-    
+
     # --- Split into long and short candidates ---
     longs = {s: m for s, m in momentum_scores.items() if m > 0}
     shorts = {s: abs(m) for s, m in momentum_scores.items() if m < 0}
@@ -53,9 +59,7 @@ def strategy(df, config_dict):
 
     # --- Final check: ensure sum(|weights|) ≤ 1.0 ---
     total_abs = sum(abs(w) for w in weights.values())
-    
     if total_abs > 1.0:
-        # Normalize to fit within 1.0
         for s in weights:
             weights[s] = weights[s] / total_abs
 

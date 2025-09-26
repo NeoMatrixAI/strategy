@@ -1,34 +1,32 @@
+from module.data_context import DataContext
 import pandas as pd
 
-def strategy(df, config_dict):
+def strategy(context: DataContext, config_dict: dict) -> dict:
     """
-    A user-defined strategy function that calculates momentum over multiple time periods
-    and outputs portfolio weights for each symbol.
-
-    Parameters:
-    - df (pd.DataFrame): price time series data 
-      (index: datetime, columns: symbols like BTCUSDT, ETHUSDT, ...)
-    - config_dict (dict): user-defined settings (parsed from JSON string)
-      {
-        "strategy_config": {
-          "minutes": [...],   # list of periods to calculate momentum
-          ... other custom parameters ...
-        }
-      }
-
-    Returns:
-    - weights (dict): {symbol: weight}, where positive = long, negative = short
+    Multi-period momentum strategy with configurable long/short ratio.
     """
     # Load strategy-specific configuration
-    strategy_specific_config = config_dict.get("strategy_config", {})
-    periods = strategy_specific_config.get("minutes", [1, 3, 5])
+    strategy_params = config_dict.get("strategy_config", {})
+    assets = strategy_params.get("assets", [])
+    window = strategy_params.get("window", 180)
+    periods = strategy_params.get("minutes", [1, 3, 5])
+    long_ratio = strategy_params.get("long_ratio", 0.7)   # default 70%
+    short_ratio = strategy_params.get("short_ratio", 0.3) # default 30%
 
-    # Validate input type
-    if not isinstance(df, pd.DataFrame):
-        raise TypeError("Input must be a pandas DataFrame.")
+    # Fetch historical price data
+    hist = context.get_history(
+        assets=assets,
+        window=window,
+        frequency="1m",
+        fields=["close"]
+    )
+
+    # Pivot to get DataFrame: index=datetime, columns=asset
+    df = hist["close"].unstack(level=0)
 
     # Initialize momentum DataFrame
     momentum = pd.DataFrame(index=df.index, columns=df.columns, dtype=float)
+
     # Calculate momentum for each symbol
     for col in df.columns:
         for t in range(max(periods), len(df)):
@@ -42,7 +40,18 @@ def strategy(df, config_dict):
     # Extract momentum scores at the last timestamp
     momentum_scores = momentum.iloc[-1]
 
-    # Convert scores to weights (no normalization, user-customized usage)
-    weights = momentum_scores.to_dict()
+    # Separate long and short
+    long_scores = {k: v for k, v in momentum_scores.items() if v > 0}
+    short_scores = {k: v for k, v in momentum_scores.items() if v < 0}
+
+    # Normalize weights according to long_ratio and short_ratio
+    total_long = sum(long_scores.values())
+    total_short = -sum(short_scores.values())  # convert to positive for scaling
+
+    weights = {}
+    for k, v in long_scores.items():
+        weights[k] = (v / total_long) * long_ratio if total_long != 0 else 0
+    for k, v in short_scores.items():
+        weights[k] = (v / total_short) * short_ratio if total_short != 0 else 0
 
     return weights

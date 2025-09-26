@@ -38,7 +38,7 @@ To use a strategy in this repository:
 1. Clone or pull the latest version of this repository
 2. Select the strategy you want to use
 3. Load it into your local `nb-runner` environment
-4. Use it via notebooks like `strategy_verify_test.ipynb`, `backtest.ipynb`, and `trade.ipynb`
+4. Use it via notebooks like `download_{futures/spot}_sample.ipynb`, `{futures/spot}_strategy_verify.ipynb`, `{futures/spot}_backtest.ipynb`, and `{futures/spot}_trade.ipynb`
 
 Make sure you are also using the [nb-runner](https://github.com/NeoMatrixAI/nb-runner) repository, which contains the notebook runner and execution logic.
 

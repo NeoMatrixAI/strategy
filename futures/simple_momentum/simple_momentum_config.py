@@ -1,5 +1,10 @@
+# ==========================
+# Strategy Parameter Settings
+# ==========================
+
 strategy_config = {
-    "lookback": 60,              # Lookback period for momentum calculation
-    "long_allocation_pct": 0.6,  # Proportion of capital allocated to longs
-    "short_allocation_pct": 0.4  # Proportion of capital allocated to shorts
+    "assets": ["BTCUSDT", "ETHUSDT", "XRPUSDT"],
+    "lookback": 20,
+    "long_allocation_pct": 0.7,
+    "short_allocation_pct": 0.3
 }

@@ -6,211 +6,144 @@
 > - 🇨🇳 [中文](./README_CHN.md) 🇨🇳
 ---
 
-## 📘 How to Implement Your Own Strategy
+## 📘 How to Implement Your Own Strategy (AI Prompt)
 
-This guide is designed for users who may not be familiar with coding. 
-It provides a simple step-by-step explanation for building a custom strategy function. The example below is for reference, and users can develop their own logic by following the same structure.
-
----
-
-## ✅ Required Structure (Fixed Rules)
-
-- Function name must be `strategy`
-- Function inputs: `df`, `config_dict`
-- Function outputs: `long_candidates`, `short_candidates` (both must be lists)
-- Configuration must be accessed like this:
-
-```python
-strategy_specific_config = config_dict.get('strategy_config')
-```
-
-Your strategy settings must be defined in a file (e.g., `config.py`) as follows:
-
-```python
-# config.py example
-hours = 12  # Time intervals in hours
-
-strategy_config = {
-    "maximum_candidates": 5,  # Number of long/short selections
-    "minutes": 60*hours  # Converted to minutes
-}
-```
-
-> ⚠️ The system will wrap this `strategy_config` into a `config_dict` and pass it to the strategy like this:
-
-```python
-longs, shorts = strategy.strategy(df, {'strategy_config': config.strategy_config})
-```
-
-Users do **not** need to create `config_dict` manually—just call the strategy as shown.
+You are an expert trading system assistant.  
+Your task is to generate two Python files (`strategy.py` and `strategy_config.py`) that strictly follow the required structure below.  
+The user will provide strategy ideas, indicators, or trading logic, and you must implement them inside the fixed template.
 
 ---
 
-## 🧾 Structure of Input Data (`df`)
+## ✅ Fixed Rules (Must Follow)
 
-The `df` passed into the strategy function is a **time series price DataFrame**, with:
+1. The function name **must** be `strategy`.
 
-- **Index (rows)**: Timestamps (minute frequency)
-- **Columns**: Asset symbols (e.g., BTCUSDT, ETHUSDT, etc.)
-- **Values**: Closing prices at each timestamp (float)
-
-Example layout:
-
-| Time               | BTCUSDT | ETHUSDT | XRPUSDT | ... |
-|--------------------|---------|---------|---------|-----|
-| 2025-04-13 00:00:00| 84817.0 | 1655.26 | 2.1568  | ... |
-| 2025-04-13 00:01:00| 84836.7 | 1655.39 | 2.1565  | ... |
-| 2025-04-13 00:02:00| 84891.7 | 1656.20 | 2.1593  | ... |
-
-> ✅ The strategy uses this DataFrame to select long and short candidates based on your logic.
-
----
-
-## 🪄 Strategy Example: Simple Return-Based Strategy
+2. Function signature **must** be:
 
 ```python
-# strategy.py
-import pandas as pd
-
-def strategy(df, config_dict):
-    """
-    A very simple strategy that compares the latest price
-    to the price N minutes ago. It selects assets with the
-    highest and lowest returns.
-    """
-    strategy_specific_config = config_dict.get('strategy_config')
-
-    period = strategy_specific_config.get("minutes")[0]  # Use the first period only
-    maximum_candidates = strategy_specific_config.get("maximum_candidates")
-
-    returns = df.iloc[-1] / df.iloc[-period] - 1  # Calculate simple returns
-    sorted_returns = returns.sort_values(ascending=False)
-
-    long_candidates = list(sorted_returns.head(maximum_candidates).index)
-    short_candidates = list(sorted_returns.tail(maximum_candidates).index)
-
-    return long_candidates, short_candidates
+def strategy(context: DataContext, config_dict: dict) -> dict:
 ```
 
----
-
-## 🧱 Strategy Verify Test Example (Including Config)
+3. You must import DataContext as:
 
 ```python
-# 1. config.py example
-hours = 12  # Time intervals in hours
-
-strategy_config = {
-    "maximum_candidates": 5,  # Number of long/short selections
-    "minutes": 60*hours  # Converted to minutes
-}
-
-# 2. strategy.py: Contains the strategy function above
-
-# 3. How to run it (e.g., in main.py or Jupyter Notebook)
-import strategy   # Your strategy file
-import config     # Your config file
-
-# df is the system-provided DataFrame of price data
-df = get_price_data_somehow()
-longs, shorts = strategy.strategy(df, {"strategy_config": config.strategy_config})
-
-# Print result
-print("📈 Long candidates:", longs)
-print("📉 Short candidates:", shorts)
+from module.data_context import DataContext
 ```
 
----
-
-## ✅ Expected Output Format
+4. Data request must use the following pattern:
 
 ```python
-📈 Long candidates:
-['BTCUSDT', 'ETHUSDT', 'XRPUSDT']
-
-📉 Short candidates:
-['SOLUSDT', 'AVAXUSDT', 'DOGEUSDT']
+hist = context.get_history(
+    assets=assets,                 # list of symbols, e.g. ["BTCUSDT", "ETHUSDT"]
+    window=window,                 # lookback window, integer
+    frequency="1m",                # allowed values: "1m" or "1d"
+    fields=["high", "low", "close"] # Only OHLCV fields are available in strategy logic, and multiple selections are allowed.
+)
 ```
 
----
+5. The hist DataFrame format (MultiIndex, ["asset","datetime"]):
 
-## ❓Tips
+| asset   | datetime                  | high      | low       | close     |
+|---------|---------------------------|-----------|-----------|-----------|
+| BTCUSDT | 2025-08-31 21:02:00+00:00 | 109029.30 | 109015.70 | 109029.30 |
+| ETHUSDT | 2025-08-31 21:02:00+00:00 | 4452.68   | 4450.43   | 4452.68   |
+| XRPUSDT | 2025-08-31 21:02:00+00:00 | 2.8073    | 2.8053    | 2.8073    |
+| BTCUSDT | 2025-08-31 21:03:00+00:00 | 109029.30 | 108981.70 | 108981.70 |
+| ETHUSDT | 2025-08-31 21:03:00+00:00 | 4452.68   | 4448.28   | 4448.28   |
+| XRPUSDT | 2025-08-31 21:03:00+00:00 | 2.8073    | 2.8053    | 2.8053    |
+...
+| BTCUSDT | 2025-09-01 00:00:00+00:00 | 108214.30  | 108169.20| 108214.30 |
+| ETHUSDT | 2025-09-01 00:00:00+00:00 | 4389.7200  | 4383.9300| 4387.9800 |
+| XRPUSDT | 2025-09-01 00:00:00+00:00 | 2.7750     | 2.7712   | 2.7746    |
+| BTCUSDT | 2025-09-01 00:01:00+00:00 | 108291.90  | 108214.30| 108288.20 |
+| ETHUSDT | 2025-09-01 00:01:00+00:00 | 4389.3400  | 4387.30  | 4389.00   |
+| XRPUSDT | 2025-09-01 00:01:00+00:00 | 2.7764     | 2.7742   | 2.7764    |
 
-- The `df` is provided automatically by the system
-- You must return results as **lists**
-- For more complex strategies, you can build on the logic of this template
 
 
----
+6. Config usage rules:
 
-# 🛠 Sample config.py Template
+- In strategy.py:
 
-Here’s a minimal example of what your `config.py` should look like:
+Example:
 
 ```python
-# config.py
-# ==========================
-# Required System Settings
-# ==========================
-
-system_config = {
-    "data_apikey": "Input User Data Api Key", # CoinAPI - data api key
-    "strategy_name": "multi_period_momentum", # User strategy file name
-    "trading_hours": 72, # System run time
-    "base_symbol": "BTCUSDT",
-    "symbols": ['BTCUSDT', 'ETHUSDT', 'XRPUSDT', 'BCHUSDT', 'LTCUSDT', 
-                'ADAUSDT', 'ETCUSDT', 'TRXUSDT', 'DOTUSDT', 'DOGEUSDT', 
-                'SOLUSDT', 'BNBUSDT', 'ICPUSDT', 'FILUSDT', 'XLMUSDT',
-                'ONTUSDT', 'QTUMUSDT', 'NKNUSDT', 'AVAXUSDT', 'CELOUSDT',
-                'WAXPUSDT', 'DYMUSDT', 'APTUSDT', 'FLOWUSDT', 'GTCUSDT',
-                'SEIUSDT', 'ATOMUSDT', 'NEARUSDT', 'STXUSDT', 'MINAUSDT',
-                'BSVUSDT', 'EGLDUSDT', 'RVNUSDT', 'ONEUSDT', 'NEOUSDT',
-                'JUPUSDT', 'ZILUSDT', 'XTZUSDT', 'LUNCUSDT', 'CKBUSDT',
-                'IOTAUSDT', 'THETAUSDT', 'ICXUSDT', 'ALGOUSDT', 'LSKUSDT', 
-                'CFXUSDT', 'TONUSDT', 'MEMEUSDT', 'SXPUSDT', 'KASUSDT',
-                'HBARUSDT', 'IOSTUSDT', 'BEAMUSDT', 'FETUSDT', 'XVGUSDT', 
-                'SUIUSDT', 'VETUSDT', 'KSMUSDT', 'ARBUSDT', 'ARUSDT', 
-                'RUNEUSDT', 'IOTXUSDT', 'TAIKOUSDT', 'COREUSDT', 'BBUSDT', 
-                'COTIUSDT', 'NTRNUSDT'], # List of all currently available symbols: define only the symbols you need as values.
-    "productType": "usdt-futures",
-    "posMode": "hedge_mode", # one_way_mode , hedge_mode
-    "marginMode": "crossed", # Margin mode: crossed (isolated requires holdSide in hedge_mode)
-    "holdSide": "long",      # Position direction: long (used only in isolated + hedge_mode)   
-    "marginCoin": "usdt",
-    "orderType": "market",
-    "timeframe": "1min",
-    "tradeType": "future",
-    "is_portfolio": True,   
-    "total_allocation": 1.0, # Proportion of total assets to use
-    "leverage": 10,          # Leverage
-    "new_data_window": 60,   # The window value for fetching the latest data (preferably the maximum value of the strategy parameter)
-    "weight_method": "custom", # equal(1/n), split(long: 0.5 --> 1/n | short: 0.5 --> 1/n), custom(custom_weights)
-    "custom_weights": {        # Required if weight_method is custom
-        "BTCUSDT" : "0.5",
-        "ETHUSDT" : "0.3",
-        "XRPUSDT" : "0.2"
-    }    
-}
-
-# ==========================
-# Rebalancing Trade Parameters
-# ==========================
-
-rebalancing_config = {
-    "rebalancing_interval_hours": 3, # Rebalancing cycle (hours)
-    "minimum_candidates": 0
-}
-
-
-# ==========================
-# Strategy Parameter Settings
-# ==========================
-
-hours = 12
-strategy_config = {
-    "maximum_candidates": 5,
-    "minutes": 60 * hours
-}
+strategy_params = config_dict.get("strategy_config", {})
+param1 = strategy_params.get("param1")
+param2 = strategy_params.get("param2")
 ```
 
-✅ strategy_config is automatically passed to your strategy function by the system.
+- In strategy_config.py:
+  
+Example:
+
+```python
+strategy_config = {"param1": value, "param2": value}
+```
+
+7. The function must return weights as a dictionary:
+
+Example:
+
+```python
+weights = {"BTCUSDT": 0.4, "ETHUSDT": -0.3, "XRPUSDT": 0.3}
+```
+
+### Rules for weights:
+- Positive value = Long position
+- Negative value = Short position
+- The absolute sum of all weights must NOT exceed 1.0 (∑ |weight| ≤ 1.0)
+- Each weight represents the proportion of margin capital allocated to that symbol.
+
+### ✅ Part 1: strategy.py
+- Must define the strategy function exactly as above.
+- Must use context.get_history() to retrieve data.
+- Must use config_dict parameters via strategy_params.
+- Must implement the user’s strategy logic inside this structure.
+- Must return a valid weights dictionary following the rules.
+
+### ✅ Part 2: strategy_config.py
+- Must contain a single dictionary named strategy_config.
+- The keys must exactly match the parameters referenced in strategy.py.
+- Provide reasonable default/example values.
+
+  Example:
+
+  ```python
+  strategy_config = {
+    "assets": ["BTCUSDT", "ETHUSDT", "XRPUSDT", ... ]
+    "window": 180,
+    "param1": 0.5,
+    "param2": [1,3,6]
+  }
+  ```
+  
+### ✅ Your Implementation Task
+- Implement all trading logic strictly inside the fixed structure.
+- Do not change function names, parameters, or return type.
+- Code must be fully runnable.
+- Use inline comments (# ...) if needed to explain.
+- Do not output anything except the code.
+
+### ✅ [MY STRATEGY IDEA] 👇
+👉 (The user will write their own strategy idea here)
+Example:
+- Momentum = Price(t) − Price(t − n)
+- Normalize Momentum to range −1 ~ +1
+- Long weight = (Normalized Momentum + 1) / 2
+- Short weight = (1 − Normalized Momentum) / 2
+
+### ✅ Output Format
+#### 📄 strategy.py
+
+```python
+# full content of strategy.py
+```
+
+#### 📄 strategy_config.py
+
+```python
+# full content of strategy_config.py
+```
+
+✅ Now generate the full Python code for the user’s requested strategy following these rules.
