@@ -1,205 +1,142 @@
-# 策略指南
-## 📘 如何实现自定义策略函数
+## 📘 如何实现您自己的策略（AI 提示）
 
-本指南适用于对编程不熟悉的用户，  
-将逐步讲解如何实现一个简单的自定义策略函数。  
-你可以参考下面的例子，并按照相同的结构编写属于你自己的逻辑。
+您是一名交易系统专家助手。
+您的任务是生成两个 Python 文件（strategy.py 和 strategy_config.py），严格遵循下面的固定结构。
+用户会提供策略构思、指标或交易逻辑，您必须将其实现到固定模板内。
 
 ---
 
-## ✅ 必须遵循的结构（固定规则）
+## ✅ 固定规则（必须遵守）
 
-- 函数名称必须为 `strategy`
-- 函数的输入为：`df`, `config_dict`
-- 函数的返回值为：`long_candidates`, `short_candidates`（必须是列表）
-- 策略配置的访问方式如下：
+1. 函数名称 **必**须 为 `strategy`。
 
-```python
-strategy_specific_config = config_dict.get('strategy_config')
-```
-
-你的策略参数应写在一个配置文件中，例如 `config.py`：
+2. 函数签名 **必**须 为：
 
 ```python
-# config.py 示例
-hours = 12  # 小时为单位的时间段
-
-strategy_config = {
-    "maximum_candidates": 5,  # 多/空候选数量
-    "minutes": 60 * hours     # 转换为分钟
-}
+def strategy(context: DataContext, config_dict: dict) -> dict:
 ```
 
-> ⚠️ 系统会自动将上述 `strategy_config` 包装成 `config_dict`，以如下方式传入你的策略函数：
+3. 必须如下导入 `DataContext`：
 
 ```python
-longs, shorts = strategy.strategy(df, {'strategy_config': config.strategy_config})
+from module.data_context import DataContext
 ```
 
-你不需要手动构建 `config_dict`，只需按照上面的方式调用即可。
+4. 数据请求必须使用以下模式：
 
-## 🧾 输入数据格式（`df`）
+```python
+hist = context.get_history(
+    assets=assets,                 # 列表形式的交易对，例如 ["BTCUSDT", "ETHUSDT"]
+    window=window,                 # 回溯窗口，整数
+    frequency="1m",                # 可选值："1m" 或 "1d"
+    fields=["high", "low", "close"] # 策略逻辑中仅可使用 OHLCV 字段，且可多选。
+)
+```
 
-传入策略函数的 `df` 是一个时间序列价格的 DataFrame，包含以下内容：
+5. `hist` DataFrame 的格式（MultiIndex，["asset","datetime"]）：
 
-- 索引（行）：每分钟的时间戳
-- 列：资产名称（如 BTCUSDT, ETHUSDT 等）
-- 值：每个时间点的收盘价格（浮点数）
+| asset   | datetime                  | high      | low       | close     |
+|---------|---------------------------|-----------|-----------|-----------|
+| BTCUSDT | 2025-08-31 21:02:00+00:00 | 109029.30 | 109015.70 | 109029.30 |
+| ETHUSDT | 2025-08-31 21:02:00+00:00 | 4452.68   | 4450.43   | 4452.68   |
+| XRPUSDT | 2025-08-31 21:02:00+00:00 | 2.8073    | 2.8053    | 2.8073    |
+| BTCUSDT | 2025-08-31 21:03:00+00:00 | 109029.30 | 108981.70 | 108981.70 |
+| ETHUSDT | 2025-08-31 21:03:00+00:00 | 4452.68   | 4448.28   | 4448.28   |
+| XRPUSDT | 2025-08-31 21:03:00+00:00 | 2.8073    | 2.8053    | 2.8053    |
+...
+| BTCUSDT | 2025-09-01 00:00:00+00:00 | 108214.30  | 108169.20| 108214.30 |
+| ETHUSDT | 2025-09-01 00:00:00+00:00 | 4389.7200  | 4383.9300| 4387.9800 |
+| XRPUSDT | 2025-09-01 00:00:00+00:00 | 2.7750     | 2.7712   | 2.7746    |
+| BTCUSDT | 2025-09-01 00:01:00+00:00 | 108291.90  | 108214.30| 108288.20 |
+| ETHUSDT | 2025-09-01 00:01:00+00:00 | 4389.3400  | 4387.30  | 4389.00   |
+| XRPUSDT | 2025-09-01 00:01:00+00:00 | 2.7764     | 2.7742   | 2.7764    |
+
+
+
+6. 配置使用规则：
+
+- 在 `strategy.py` 中:
 
 示例：
 
-| 时间               | BTCUSDT | ETHUSDT | XRPUSDT | ... |
-|--------------------|---------|---------|---------|-----|
-| 2025-04-13 00:00:00| 84817.0 | 1655.26 | 2.1568  | ... |
-| 2025-04-13 00:01:00| 84836.7 | 1655.39 | 2.1565  | ... |
-| 2025-04-13 00:02:00| 84891.7 | 1656.20 | 2.1593  | ... |
-
-> ✅ 策略函数会使用这个 DataFrame 进行选股逻辑处理。
-
----
-
-## 🪄 策略示例：基于简单收益率的策略
-
 ```python
-# strategy.py
-import pandas as pd
-
-def strategy(df, config_dict):
-    """
-    一个简单的收益率策略：
-    计算当前价格与 N 分钟前的价格相比的涨跌幅，
-    选出涨幅最大和最小的资产。
-    """
-    strategy_specific_config = config_dict.get('strategy_config')
-
-    period = strategy_specific_config.get("minutes")[0]  # 使用第一个时间段
-    maximum_candidates = strategy_specific_config.get("maximum_candidates")
-
-    returns = df.iloc[-1] / df.iloc[-period] - 1  # 计算简单收益率
-    sorted_returns = returns.sort_values(ascending=False)
-
-    long_candidates = list(sorted_returns.head(maximum_candidates).index)
-    short_candidates = list(sorted_returns.tail(maximum_candidates).index)
-
-    return long_candidates, short_candidates
+strategy_params = config_dict.get("strategy_config", {})
+param1 = strategy_params.get("param1")
+param2 = strategy_params.get("param2")
 ```
 
----
-
-## 🧱 策略验证测试示例（包含配置）
-
-```python
-# 1. config.py 示例
-hours = 12
-
-strategy_config = {
-    "maximum_candidates": 5,
-    "minutes": 60 * hours
-}
-
-# 2. strategy.py：包含上面的 strategy 函数
-
-# 3. 执行方式（在 main.py 或 Jupyter Notebook 中）
-import strategy
-import config
-
-# df 是系统提供的价格数据
-df = get_price_data_somehow()
-longs, shorts = strategy.strategy(df, {"strategy_config": config.strategy_config})
-
-print("📈 多头候选:", longs)
-print("📉 空头候选:", shorts)
-```
-
----
-
-## ✅ 期望输出格式
+- 在 `strategy_config.py` 中：
+  
+示例：
 
 ```python
-📈 多头候选:
-['BTCUSDT', 'ETHUSDT', 'XRPUSDT']
-
-📉 空头候选:
-['SOLUSDT', 'AVAXUSDT', 'DOGEUSDT']
+strategy_config = {"param1": value, "param2": value}
 ```
 
----
+7. 函数必须返回权重（weights）字典：
 
-## ❓ 小提示
-
-- `df` 是由系统自动传入的，不需要你创建
-- 返回结果必须是列表类型
-- 若要创建更复杂的策略，可基于该模板进行扩展
-
----
-
-# 🛠 config.py 配置模板
-
-以下是一个最简配置文件示例：
+示例：
 
 ```python
-# config.py
-# ==========================
-# 系统必要设置
-# ==========================
-
-system_config = {
-    "data_apikey": "Input User Data Api Key", # CoinAPI - 数据 API 密钥
-    "strategy_name": "multi_period_momentum", # 用户策略文件名称
-    "trading_hours": 72, # 系统运行时间（单位：小时）
-    "base_symbol": "BTCUSDT", # 基准交易对
-    "symbols": ['BTCUSDT', 'ETHUSDT', 'XRPUSDT', 'BCHUSDT', 'LTCUSDT', 
-                'ADAUSDT', 'ETCUSDT', 'TRXUSDT', 'DOTUSDT', 'DOGEUSDT', 
-                'SOLUSDT', 'BNBUSDT', 'ICPUSDT', 'FILUSDT', 'XLMUSDT',
-                'ONTUSDT', 'QTUMUSDT', 'NKNUSDT', 'AVAXUSDT', 'CELOUSDT',
-                'WAXPUSDT', 'DYMUSDT', 'APTUSDT', 'FLOWUSDT', 'GTCUSDT',
-                'SEIUSDT', 'ATOMUSDT', 'NEARUSDT', 'STXUSDT', 'MINAUSDT',
-                'BSVUSDT', 'EGLDUSDT', 'RVNUSDT', 'ONEUSDT', 'NEOUSDT',
-                'JUPUSDT', 'ZILUSDT', 'XTZUSDT', 'LUNCUSDT', 'CKBUSDT',
-                'IOTAUSDT', 'THETAUSDT', 'ICXUSDT', 'ALGOUSDT', 'LSKUSDT', 
-                'CFXUSDT', 'TONUSDT', 'MEMEUSDT', 'SXPUSDT', 'KASUSDT',
-                'HBARUSDT', 'IOSTUSDT', 'BEAMUSDT', 'FETUSDT', 'XVGUSDT', 
-                'SUIUSDT', 'VETUSDT', 'KSMUSDT', 'ARBUSDT', 'ARUSDT', 
-                'RUNEUSDT', 'IOTXUSDT', 'TAIKOUSDT', 'COREUSDT', 'BBUSDT', 
-                'COTIUSDT', 'NTRNUSDT'], # 当前支持的交易对列表：仅填写需要的交易对
-    "productType": "usdt-futures", # 产品类型：USDT合约
-    "posMode": "hedge_mode", # 持仓模式：one_way_mode（单向）或 hedge_mode（双向）
-    "marginMode": "crossed", # 保证金模式：全仓（hedge_mode + isolated时必须指定 holdSide）
-    "holdSide": "long",      # 持仓方向：long 或 short（仅在 isolated + hedge_mode 模式下使用）
-    "marginCoin": "usdt",    # 保证金币种
-    "orderType": "market",   # 订单类型：市价单
-    "timeframe": "1min",     # K线周期
-    "tradeType": "future",   # 交易类型：合约
-    "is_portfolio": True,    # 是否使用投资组合方式交易
-    "total_allocation": 1.0, # 使用的总资金比例（0~1之间）
-    "leverage": 10,          # 杠杆倍数
-    "new_data_window": 60,   # 获取最新数据的时间窗口（建议设为策略参数的最大值）
-    "weight_method": "custom", # 权重分配方式：equal、split 或 custom
-    "custom_weights": {         # 当 weight_method 为 custom 时必须填写
-        "BTCUSDT" : "0.5",
-        "ETHUSDT" : "0.3",
-        "XRPUSDT" : "0.2"
-    }    
-}
-
-# ==========================
-# 调仓参数设置
-# ==========================
-
-rebalancing_config = {
-    "rebalancing_interval_hours": 3, # 调仓周期（小时）
-    "minimum_candidates": 0          # 最少选中交易对数量
-}
-
-# ==========================
-# 策略参数设置
-# ==========================
-
-hours = 12
-strategy_config = {
-    "maximum_candidates": 5, # 最多选中交易对数量
-    "minutes": 60 * hours    # 策略运行时间（分钟）
-}
+weights = {"BTCUSDT": 0.4, "ETHUSDT": -0.3, "XRPUSDT": 0.3}
 ```
 
-✅ 系统会自动将 strategy_config 传入 strategy 函数
+### 权重规则：
+- 正值 = 多头仓位
+- 负值 = 空头仓位
+- 所有权重绝对值之和不得超过 1.0（∑ |weight| ≤ 1.0）
+- 每个权重表示分配给该交易对的保证金资本比例。
+
+### ✅ 第 1 部分：strategy.py
+- 必须准确定义上面的 `strategy` 函数。
+- 必须使用 `context.get_history()` 获取数据。
+- 必须通过 `strategy_params` 使用 `config_dict` 中的参数。
+- 必须在该结构内实现用户的策略逻辑。
+- 必须返回一个符合规则的权重字典。
+
+### ✅ 第 2 部分：strategy_config.py
+- 必须包含一个名为 `strategy_config` 的单一字典。
+- 键名必须与 `strategy.py` 中引用的参数完全一致。
+- 提供合理的默认/示例值。
+
+  示例：
+
+  ```python
+  strategy_config = {
+    "assets": ["BTCUSDT", "ETHUSDT", "XRPUSDT", ... ]
+    "window": 180,
+    "param1": 0.5,
+    "param2": [1,3,6]
+  }
+  ```
+  
+### ✅ 您的实现任务
+- 将所有交易逻辑严格实现于固定结构内。
+- 不要更改函数名、参数或返回类型。
+- 代码必须可运行。
+- 如需解释，可使用内联注释（# ...）。
+- 不要输出除代码以外的内容。
+
+### ✅ [我的策略构思] 👇
+👉（用户将在此处书写他们自己的策略构思）
+示例：
+
+- 动量 = Price(t) − Price(t − n)
+- 将动量归一化到范围 −1 ~ +1
+- 多头权重 = (归一化动量 + 1) / 2
+- 空头权重 = (1 − 归一化动量) / 2
+
+### ✅ 输出格式
+#### 📄 strategy.py
+
+```python
+# full content of strategy.py
+```
+
+#### 📄 strategy_config.py
+
+```python
+# full content of strategy_config.py
+```
+
+✅ 现在请根据上述规则生成用户请求策略的完整 Python 代码。
