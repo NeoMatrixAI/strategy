@@ -2,8 +2,8 @@
 
 > 📚 This README is available in multiple languages:  
 > - 🇺🇸 English (default) — this file  
-> - 🇰🇷 [한국어](./README_KOR.md) 🇰🇷  
-> - 🇨🇳 [中文](./README_CHN.md) 🇨🇳
+> - 🇰🇷 [한국어](../docs/Strategy.README.ko.md) 🇰🇷  
+> - 🇨🇳 [中文](../docs/Strategy.README.zh-CN.md) 🇨🇳
 ---
 
 ## 📘 How to Implement Your Own Strategy (AI Prompt)
