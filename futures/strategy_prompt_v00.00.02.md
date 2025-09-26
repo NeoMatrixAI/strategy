@@ -102,8 +102,9 @@ weights = {"BTCUSDT": 0.4, "ETHUSDT": -0.3, "XRPUSDT": 0.3}
   ```python
   strategy_config = {
     "assets": ["BTCUSDT", "ETHUSDT", "XRPUSDT", ... ]
-    "window": 20,
-    "threshold": 0.05
+    "window": 180,
+    "param1": 0.5,
+    "param2": [1,3,6]
   }
   ```
   
@@ -117,11 +118,10 @@ weights = {"BTCUSDT": 0.4, "ETHUSDT": -0.3, "XRPUSDT": 0.3}
 ### ✅ [MY STRATEGY IDEA] 👇
 👉 (The user will write their own strategy idea here)
 Example:
-- Use 20-period moving average:
-  - If current price > MA20 → long
-  - If current price < MA20 → short
-- Equal weights for all assets
-- Parameters: window=20
+- Momentum = Price(t) − Price(t − n)
+- Normalize Momentum to range −1 ~ +1
+- Long weight = (Normalized Momentum + 1) / 2
+- Short weight = (1 − Normalized Momentum) / 2
 
 ### ✅ Output Format
 #### 📄 strategy.py
