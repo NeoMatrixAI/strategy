@@ -2,7 +2,6 @@
 # Required System Settings
 # ==========================
 system_config = {
-    "data_apikey": "a71eaf04-802f-40be-93c2-5bee2548f4db",
     "tz_str": "Asia/Seoul",
     "timeframe": "1min",
     "orderType": "market",
@@ -11,8 +10,8 @@ system_config = {
     "marginMode": "crossed",
     "marginCoin": "usdt",
     "leverage": 5,
-    "trading_hours": 6,
-    "total_allocation": 0.4,
+    "trading_hours": 12,
+    "total_allocation": 0.5,
 }
 
 

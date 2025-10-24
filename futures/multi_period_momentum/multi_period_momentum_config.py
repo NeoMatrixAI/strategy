@@ -8,6 +8,6 @@ strategy_config = {
                "ADAUSDT", "ETCUSDT", "TRXUSDT", "DOTUSDT", "DOGEUSDT"],
     "window": 180,
     "minutes": [int(i*60) for i in hours],  # convert hours to minutes
-    "long_ratio": 0.7,
-    "short_ratio": 0.3    
+    "long_ratio": 0.5,
+    "short_ratio": 0.5    
 }
