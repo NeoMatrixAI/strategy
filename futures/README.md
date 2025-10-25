@@ -37,7 +37,7 @@ hist = context.get_history(
     assets=assets,                 # list of symbols, e.g. ["BTCUSDT", "ETHUSDT"]
     window=window,                 # lookback window, integer
     frequency="1m",                # allowed values: "1m" or "1d"
-    fields=["high", "low", "close"] # Only OHLCV fields are available in strategy logic, and multiple selections are allowed.
+    fields=["open", "high", "low", "close", "volume"] # In strategy logic, you can select the fields required for your strategy from among OHLCV.
 )
 ```
 
