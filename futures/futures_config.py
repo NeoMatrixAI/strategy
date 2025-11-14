@@ -2,6 +2,7 @@
 # Required System Settings
 # ==========================
 system_config = {
+    "data_apikey": "Inert your data apikey",
     "tz_str": "Asia/Seoul",
     "timeframe": "1min",
     "orderType": "market",
@@ -9,9 +10,9 @@ system_config = {
     "posMode": "hedge_mode",
     "marginMode": "crossed",
     "marginCoin": "usdt",
-    "leverage": 5,
+    "leverage": 3,
     "trading_hours": 12,
-    "total_allocation": 0.5,
+    "total_allocation": 0.9
 }
 
 
