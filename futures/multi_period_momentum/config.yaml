@@ -26,7 +26,7 @@ strategy:
 
   config:
     base:
-      window: 4000
+      window: 100
       lookback_hours: [1, 3, 6]
 
     position:
@@ -44,7 +44,7 @@ backtest:
   data_apikey: "YOUR_DATA_API_KEY"       # [Required] Data API key
   start_date: "2025-10-01 09:00"         # [Required] Start datetime
   end_date: "2025-10-10 08:59"           # [Required] End datetime
-  lookback_bars: 30                      # [Required] Past bars needed for strategy initialization
+  lookback_bars: 150                     # [Required] Past bars needed for strategy initialization
   initial_capital: 10000                 # [Required] Initial capital (USD)
   generate_report: true                  # Generate Pyfolio report (default: true)
 
