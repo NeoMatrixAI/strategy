@@ -1,25 +1,100 @@
+"""
+Test Strategy
+
+=== FIXED VALUES (DO NOT CHANGE) ===
+
+1. Import Path
+   - from common.xxx import ... (FIXED)
+   - Server uses user-specific common folder for uploaded module files
+
+2. Function Signature
+   - def strategy(context: DataContext, config_dict: dict) -> dict (FIXED)
+
+3. Config Access
+   - assets = config_dict['assets'] (FIXED)
+   - frequency = config_dict.get("frequency", "1m") (FIXED)
+   - Other config_dict parameters are custom per strategy
+
+4. History API
+   - context.get_history(assets=, window=, frequency=, fields=) (FIXED)
+   - fields: list of required columns from ohlcv (e.g., ["close"], ["open", "high", "low", "close"])
+   - Returns: MultiIndex DataFrame (asset, datetime)
+     ```
+                                         open    high     low   close    volume
+    asset    datetime
+    BTCUSDT  2025-11-13 04:01:00+00:00  100.0   100.2    99.7   100.0   37215.0
+    ETHUSDT  2025-11-13 04:01:00+00:00  105.1   105.1   104.7   105.0   74304.2
+     ```
+
+5. Return Format (FIXED)
+   {
+       "SYMBOL": {
+           "weight": float,              # abs sum <= 1, positive=long, negative=short
+           "presetStopLossPrice": float, # can be None
+           "presetStopSurplusPrice": float # can be None
+       }
+   }
+"""
+
+# [FIXED] Import: from common.xxx (server uses user-specific common folder)
 from module.data_context import DataContext
 from common.momentum_utils import calculate_momentum, normalize_weights
 from common.sltp_utils import compute_sltp
 
+import pandas as pd
+
+
+def parse_frequency_to_minutes(frequency: str) -> int:
+    """
+    Convert frequency string to minutes.
+    Example: "1m" -> 1, "5m" -> 5, "15m" -> 15, "1h" -> 60, "1d" -> 1440
+    """
+    freq = frequency.lower().strip()
+    if freq.endswith("m"):
+        return int(freq[:-1])
+    elif freq.endswith("h"):
+        return int(freq[:-1]) * 60
+    elif freq.endswith("d"):
+        return int(freq[:-1]) * 1440
+    else:
+        return 1  # default 1분
+
+
+# [FIXED] def strategy(context: DataContext, config_dict: dict) -> dict
 def strategy(context: DataContext, config_dict: dict) -> dict:
-    strategy_config = config_dict['strategy_config']
-    position_config = config_dict['position_config']
-    sltp_config = config_dict['sltp_config']
+
+    # [FIXED] assets, frequency
     assets = config_dict['assets']
-    
-    window = strategy_config.get("window", 180)
-    periods = strategy_config.get("minutes", [60, 120, 180])
+    frequency = config_dict.get("frequency", "1m")
+
+    # [CUSTOM] Strategy-specific parameters
+    base_config = config_dict['base']
+    position_config = config_dict['position']
+    sltp_config = config_dict['sltp']
+
+    window = base_config.get("window", 180)
+
+    # lookback_hours: Hours used for momentum calculation
+    # Example: [1, 3, 6] -> Compare with prices from 1h, 3h, 6h ago
+    lookback_hours = base_config.get("lookback_hours", [1, 3, 6])
+
     long_ratio = position_config.get("long_ratio", 0.7)
     short_ratio = position_config.get("short_ratio", 0.3)
     stop_loss_pct = sltp_config.get("stop_loss_pct", 0.02)
     take_profit_pct = sltp_config.get("take_profit_pct", 0.04)
 
-    # 1분 데이터 로드
+    # Convert frequency to minutes and calculate lookback periods in bars
+    bar_minutes = parse_frequency_to_minutes(frequency)
+    # Hours -> Minutes -> Bar count
+    # Example: lookback_hours=[1,3,6], bar_minutes=15 -> periods=[4, 12, 24] bars
+    periods = [int(h * 60 / bar_minutes) for h in lookback_hours]
+
+    # [FIXED] context.get_history(assets=, window=, frequency=, fields=)
+    # Returns: MultiIndex DataFrame (asset, datetime) with ohlcv columns
     hist = context.get_history(
         assets=assets,
-        window=window + max(periods),
-        frequency="1m",
+        window=window,
+        frequency=frequency,
         fields=["close"]
     )
 
@@ -28,7 +103,6 @@ def strategy(context: DataContext, config_dict: dict) -> dict:
 
     df = hist["close"].unstack(level=0)
 
-    # 모듈 호출
     momentum = calculate_momentum(df, periods)
     weights = normalize_weights(momentum, long_ratio, short_ratio)
 
@@ -37,9 +111,11 @@ def strategy(context: DataContext, config_dict: dict) -> dict:
 
     for symbol, weight in weights.items():
         price = latest_prices[symbol]
-
         sl, tp = compute_sltp(price, weight, stop_loss_pct, take_profit_pct)
 
+        # [FIXED] Return format: weight, presetStopLossPrice, presetStopSurplusPrice
+        # weight: abs sum <= 1, positive=long, negative=short
+        # sl/tp: can be None
         result[symbol] = {
             "weight": weight,
             "presetStopLossPrice": sl,

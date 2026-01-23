@@ -12,22 +12,27 @@ This repository contains strategy modules and configuration files used by the [n
 ### 📁 Structure
 
 Each strategy is organized in its own folder and includes:
-- `strategy_name.py`: The core logic of the strategy
-- `strategy_name_config.py`: The configuration file for that strategy
+- `{strategy_name}.py`: The core logic of the strategy (filename must match folder name)
+- `config.yaml`: The configuration file for that strategy
 
 Example:
 
 ```
-strategy/{futures/spot}
-└── momentum_v1/
-    ├── momentum_v1.py
-    └── momentum_v1_config.py
+strategy/
+├── futures/
+│   └── multi_period_momentum/
+│       ├── multi_period_momentum.py    # Strategy logic
+│       └── config.yaml                  # Configuration (system, strategy, backtest/live settings)
+└── spot/
+    └── your_strategy/
+        ├── your_strategy.py
+        └── config.yaml
 ```
 
-This repository contains the strategies and configuration files we have developed and regularly update.  
+This repository contains the strategies and configuration files we have developed and regularly update.
 No executable notebooks or API modules are included here.
 
-However, you are free to use your own custom strategies and configuration files in the `nb-runner` environment,  
+However, you are free to use your own custom strategies and configuration files in the `nb-runner` environment,
 not limited to the ones provided in this repository.
 
 ---

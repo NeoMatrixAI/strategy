@@ -7,23 +7,27 @@
 ### 📁 结构
 
 每个策略都组织在独立的文件夹中，包含以下内容：
-- `strategy_name.py`：策略核心逻辑
-- `strategy_name_config.py`：该策略的配置文件
+- `{strategy_name}.py`：策略核心逻辑（文件名必须与文件夹名一致）
+- `config.yaml`：该策略的配置文件
 
 示例：
 
 ```
-strategy/{future/spot}
-└── momentum_v1/
-├── momentum_v1.py
-└── momentum_v1_config.py
+strategy/
+├── futures/
+│   └── multi_period_momentum/
+│       ├── multi_period_momentum.py    # 策略逻辑
+│       └── config.yaml                  # 配置（系统、策略、回测/实盘设置）
+└── spot/
+    └── your_strategy/
+        ├── your_strategy.py
+        └── config.yaml
 ```
 
-
-本仓库包含我们开发并定期更新的策略及配置文件。  
+本仓库包含我们开发并定期更新的策略及配置文件。
 不包含可执行的笔记本或API模块。
 
-但是，在 `nb-runner` 环境中，您可以自由使用自己的自定义策略和配置文件，  
+但是，在 `nb-runner` 环境中，您可以自由使用自己的自定义策略和配置文件，
 不限于本仓库提供的内容。
 
 ---
@@ -45,8 +49,8 @@ strategy/{future/spot}
 我们还提供现货和期货策略模块的创建和设置指南，即使是初学者也可以轻松上手。
 
 - 📘 更多信息，请参阅以下每种交易类型的指南。
-  - [现货策略指南](./strategy/spot/README_CHN.md)
-  - [期货策略指南](./strategy/future/README_CHN.md)
+  - [现货策略指南](../spot/README.md)
+  - [期货策略指南](../futures/README.md)
 
 > 逐步讲解 `strategy()` 函数的编写方法、输入/输出格式、所需结构、设置方法以及示例代码。
 

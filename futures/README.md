@@ -1,149 +1,576 @@
-# Strategy Guide
+# Strategy Development Guide - AI Prompt
 
-> 📚 This README is available in multiple languages:  
-> - 🇺🇸 English (default) — this file  
-> - 🇰🇷 [한국어](../docs/Strategy.README.ko.md) 🇰🇷  
-> - 🇨🇳 [中文](../docs/Strategy.README.zh-CN.md) 🇨🇳
+> This README is available in multiple languages:
+> - English (default) - this file
+> - [Korean](docs/Strategy.README.ko.md)
+> - [Chinese](docs/Strategy.README.zh-CN.md)
+
 ---
 
-## 📘 How to Implement Your Own Strategy (AI Prompt)
+> Copy this entire README and paste it to Claude, GPT, Gemini, or any AI assistant.
+> Then describe your strategy idea, and the AI will generate compatible code for this system.
 
-You are an expert trading system assistant.  
-Your task is to generate two Python files (`strategy.py` and `strategy_config.py`) that strictly follow the required structure below.  
+---
+
+## AI Instructions
+
+You are an expert trading system assistant.
+Your task is to generate two files that strictly follow the required structure below:
+1. **`{strategy_name}.py`** - The strategy logic file
+2. **`config.yaml`** - The configuration file
+
 The user will provide strategy ideas, indicators, or trading logic, and you must implement them inside the fixed template.
 
 ---
 
-## ✅ Fixed Rules (Must Follow)
+## System Architecture Overview
 
-1. The function name **must** be `strategy`.
+```
+strategy/
+└── futures/
+    └── {strategy_name}/           # Strategy folder (name = strategy name)
+        ├── {strategy_name}.py     # Strategy logic (filename must match folder name)
+        └── config.yaml            # Configuration file
+```
 
-2. Function signature **must** be:
+---
 
+## Required Package Versions (CRITICAL)
+
+**You MUST write code compatible with these exact package versions.**
+The system uses these versions for both backtesting and live trading.
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| pandas | 1.5.3 | DataFrame processing |
+| numpy | 1.24.4 | Numerical operations |
+| ta-lib | 0.4.30 | Technical indicators (RSI, MACD, SMA, EMA, etc.) |
+| scipy | 1.10.1 | Statistical/mathematical functions |
+
+### TA-Lib Usage Examples
+
+```python
+import talib
+import numpy as np
+
+# Convert pandas Series to numpy array for TA-Lib
+close_array = df["close"].values
+
+# Simple Moving Average
+sma_20 = talib.SMA(close_array, timeperiod=20)
+
+# Exponential Moving Average
+ema_12 = talib.EMA(close_array, timeperiod=12)
+
+# RSI (Relative Strength Index)
+rsi = talib.RSI(close_array, timeperiod=14)
+
+# MACD
+macd, macd_signal, macd_hist = talib.MACD(close_array, fastperiod=12, slowperiod=26, signalperiod=9)
+
+# Bollinger Bands
+upper, middle, lower = talib.BBANDS(close_array, timeperiod=20, nbdevup=2, nbdevdn=2)
+
+# ATR (Average True Range) - requires high, low, close
+atr = talib.ATR(high_array, low_array, close_array, timeperiod=14)
+
+# Stochastic
+slowk, slowd = talib.STOCH(high_array, low_array, close_array,
+                           fastk_period=14, slowk_period=3, slowd_period=3)
+```
+
+### Important Compatibility Notes
+
+1. **pandas 1.5.3**: Use `.iloc[]` for positional indexing, `.loc[]` for label-based indexing
+2. **numpy 1.24.4**: `np.NaN` is deprecated, use `np.nan` instead
+3. **ta-lib 0.4.30**: Input must be numpy arrays, not pandas Series (use `.values`)
+4. **scipy 1.10.1**: Available for advanced statistical calculations
+
+---
+
+## Part 1: Strategy File (`{strategy_name}.py`)
+
+### Fixed Rules (MUST Follow)
+
+1. **Function name** must be `strategy`
+2. **Function signature** must be exactly:
 ```python
 def strategy(context: DataContext, config_dict: dict) -> dict:
 ```
 
-3. You must import DataContext as:
-
+3. **Required import**:
 ```python
 from module.data_context import DataContext
 ```
 
-4. Data request must use the following pattern:
+4. **Optional imports** (from common folder - user uploaded modules):
+```python
+from common.your_module import your_function
+```
+
+### Data Request API
 
 ```python
+# [FIXED] Get historical OHLCV data
 hist = context.get_history(
-    assets=assets,                 # list of symbols, e.g. ["BTCUSDT", "ETHUSDT"]
-    window=window,                 # lookback window, integer
-    frequency="1m",                # allowed values: "1m" or "1d"
-    fields=["open", "high", "low", "close", "volume"] # In strategy logic, you can select the fields required for your strategy from among OHLCV.
+    assets=assets,           # List of symbols, e.g., ["BTCUSDT", "ETHUSDT"]
+    window=window,           # Lookback window (number of bars)
+    frequency=frequency,     # "1m" | "5m" | "15m" | "1h" | "1d"
+    fields=["close"]         # Select from: ["open", "high", "low", "close", "volume"]
 )
 ```
 
-5. The hist DataFrame format (MultiIndex, ["asset","datetime"]):
+### Data Format (MultiIndex DataFrame)
 
-| asset   | datetime                  | high      | low       | close     |
-|---------|---------------------------|-----------|-----------|-----------|
-| BTCUSDT | 2025-08-31 21:02:00+00:00 | 109029.30 | 109015.70 | 109029.30 |
-| ETHUSDT | 2025-08-31 21:02:00+00:00 | 4452.68   | 4450.43   | 4452.68   |
-| XRPUSDT | 2025-08-31 21:02:00+00:00 | 2.8073    | 2.8053    | 2.8073    |
-| BTCUSDT | 2025-08-31 21:03:00+00:00 | 109029.30 | 108981.70 | 108981.70 |
-| ETHUSDT | 2025-08-31 21:03:00+00:00 | 4452.68   | 4448.28   | 4448.28   |
-| XRPUSDT | 2025-08-31 21:03:00+00:00 | 2.8073    | 2.8053    | 2.8053    |
-...
-| BTCUSDT | 2025-09-01 00:00:00+00:00 | 108214.30  | 108169.20| 108214.30 |
-| ETHUSDT | 2025-09-01 00:00:00+00:00 | 4389.7200  | 4383.9300| 4387.9800 |
-| XRPUSDT | 2025-09-01 00:00:00+00:00 | 2.7750     | 2.7712   | 2.7746    |
-| BTCUSDT | 2025-09-01 00:01:00+00:00 | 108291.90  | 108214.30| 108288.20 |
-| ETHUSDT | 2025-09-01 00:01:00+00:00 | 4389.3400  | 4387.30  | 4389.00   |
-| XRPUSDT | 2025-09-01 00:01:00+00:00 | 2.7764     | 2.7742   | 2.7764    |
+The `hist` DataFrame has a MultiIndex with levels `["asset", "datetime"]`:
 
-
-
-6. Config usage rules:
-
-- In strategy.py:
-
-Example:
-
-```python
-strategy_params = config_dict.get("strategy_config", {})
-param1 = strategy_params.get("param1")
-param2 = strategy_params.get("param2")
+```
+                                        open      high      low     close    volume
+asset    datetime
+BTCUSDT  2025-11-13 04:01:00+00:00    100.0    100.2     99.7    100.0    37215.0
+         2025-11-13 04:02:00+00:00    100.0    100.5     99.8    100.3    42156.0
+ETHUSDT  2025-11-13 04:01:00+00:00    105.1    105.1    104.7    105.0    74304.2
+         2025-11-13 04:02:00+00:00    105.0    105.3    104.9    105.2    68421.5
 ```
 
-- In strategy_config.py:
-  
-Example:
-
+**Common data manipulation patterns:**
 ```python
-strategy_config = {"param1": value, "param2": value}
+# Get single column as DataFrame (assets as columns, datetime as index)
+df = hist["close"].unstack(level=0)
+
+# Result:
+#                            BTCUSDT   ETHUSDT
+# datetime
+# 2025-11-13 04:01:00+00:00   100.0    105.0
+# 2025-11-13 04:02:00+00:00   100.3    105.2
+
+# Get latest prices
+latest_prices = df.iloc[-1]
 ```
 
-7. The function must return weights as a dictionary:
-
-Example:
+### Return Format (MUST Follow)
 
 ```python
-weights = {"BTCUSDT": 0.4, "ETHUSDT": -0.3, "XRPUSDT": 0.3}
+{
+    "SYMBOL": {
+        "weight": float,                  # Position weight (see rules below)
+        "presetStopLossPrice": float,     # Stop loss price (can be None)
+        "presetStopSurplusPrice": float   # Take profit price (can be None)
+    }
+}
 ```
 
-### Rules for weights:
-- Positive value = Long position
-- Negative value = Short position
-- The absolute sum of all weights must NOT exceed 1.0 (∑ |weight| ≤ 1.0)
-- Each weight represents the proportion of margin capital allocated to that symbol.
+**Weight Rules:**
+- **Positive value** = Long position
+- **Negative value** = Short position
+- **Sum of absolute values must NOT exceed 1.0**: `sum(|weight|) <= 1.0`
+- Each weight represents the proportion of margin capital allocated to that symbol
 
-### ✅ Part 1: strategy.py
-- Must define the strategy function exactly as above.
-- Must use context.get_history() to retrieve data.
-- Must use config_dict parameters via strategy_params.
-- Must implement the user’s strategy logic inside this structure.
-- Must return a valid weights dictionary following the rules.
+**Example return:**
+```python
+return {
+    "BTCUSDT": {"weight": 0.4, "presetStopLossPrice": 98000.0, "presetStopSurplusPrice": 105000.0},
+    "ETHUSDT": {"weight": -0.3, "presetStopLossPrice": 4200.0, "presetStopSurplusPrice": 3800.0},
+    "XRPUSDT": {"weight": 0.2, "presetStopLossPrice": None, "presetStopSurplusPrice": None}
+}
+```
 
-### ✅ Part 2: strategy_config.py
-- Must contain a single dictionary named strategy_config.
-- The keys must exactly match the parameters referenced in strategy.py.
-- Provide reasonable default/example values.
-
-  Example:
-
-  ```python
-  strategy_config = {
-    "assets": ["BTCUSDT", "ETHUSDT", "XRPUSDT", ... ]
-    "window": 180,
-    "param1": 0.5,
-    "param2": [1,3,6]
-  }
-  ```
-  
-### ✅ Your Implementation Task
-- Implement all trading logic strictly inside the fixed structure.
-- Do not change function names, parameters, or return type.
-- Code must be fully runnable.
-- Use inline comments (# ...) if needed to explain.
-- Do not output anything except the code.
-
-### ✅ [MY STRATEGY IDEA] 👇
-👉 (The user will write their own strategy idea here)
-Example:
-- Momentum = Price(t) − Price(t − n)
-- Normalize Momentum to range −1 ~ +1
-- Long weight = (Normalized Momentum + 1) / 2
-- Short weight = (1 − Normalized Momentum) / 2
-
-### ✅ Output Format
-#### 📄 strategy.py
+### Strategy File Template
 
 ```python
-# full content of strategy.py
+"""
+{Strategy Name}
+
+=== FIXED VALUES (DO NOT CHANGE) ===
+
+1. Import Path
+   - from common.xxx import ... (FIXED)
+   - Server uses user-specific common folder for uploaded module files
+
+2. Function Signature
+   - def strategy(context: DataContext, config_dict: dict) -> dict (FIXED)
+
+3. Config Access
+   - assets = config_dict['assets'] (FIXED)
+   - frequency = config_dict.get("frequency", "1m") (FIXED)
+   - Other config_dict parameters are custom per strategy
+
+4. History API
+   - context.get_history(assets=, window=, frequency=, fields=) (FIXED)
+   - fields: list of required columns from ohlcv (e.g., ["close"], ["open", "high", "low", "close"])
+   - Returns: MultiIndex DataFrame (asset, datetime)
+
+5. Return Format (FIXED)
+   {
+       "SYMBOL": {
+           "weight": float,              # abs sum <= 1, positive=long, negative=short
+           "presetStopLossPrice": float, # can be None
+           "presetStopSurplusPrice": float # can be None
+       }
+   }
+"""
+
+# [FIXED] Import: from module.data_context
+from module.data_context import DataContext
+
+# [OPTIONAL] Import custom modules from common folder
+# from common.your_module import your_function
+
+import pandas as pd
+import numpy as np
+
+
+# [FIXED] def strategy(context: DataContext, config_dict: dict) -> dict
+def strategy(context: DataContext, config_dict: dict) -> dict:
+
+    # [FIXED] assets, frequency from config_dict
+    assets = config_dict['assets']
+    frequency = config_dict.get("frequency", "1m")
+
+    # [CUSTOM] Strategy-specific parameters from config
+    # Access nested config like: config_dict['config']['your_section']['param']
+    # Example:
+    # base_config = config_dict['config']['base']
+    # window = base_config.get("window", 180)
+
+    # [FIXED] context.get_history(assets=, window=, frequency=, fields=)
+    # Returns: MultiIndex DataFrame (asset, datetime) with OHLCV columns
+    hist = context.get_history(
+        assets=assets,
+        window=100,  # Adjust based on your strategy needs
+        frequency=frequency,
+        fields=["close"]  # Select only the fields you need
+    )
+
+    if hist.empty:
+        return {}
+
+    # === YOUR STRATEGY LOGIC HERE ===
+
+    # Example: Convert to DataFrame with assets as columns
+    df = hist["close"].unstack(level=0)
+    latest_prices = df.iloc[-1]
+
+    # Calculate your signals and weights...
+    weights = {}  # Your logic to calculate weights
+
+    # Build result
+    result = {}
+    for symbol in assets:
+        weight = weights.get(symbol, 0.0)
+        price = latest_prices[symbol]
+
+        # Calculate stop loss and take profit (optional)
+        sl = None  # Your stop loss logic
+        tp = None  # Your take profit logic
+
+        # [FIXED] Return format
+        result[symbol] = {
+            "weight": weight,
+            "presetStopLossPrice": sl,
+            "presetStopSurplusPrice": tp,
+        }
+
+    return result
 ```
 
-#### 📄 strategy_config.py
+---
+
+## Part 2: Configuration File (`config.yaml`)
+
+### Configuration Structure
+
+```yaml
+version: "2.0"
+
+# =============================================================================
+# SYSTEM - Common Settings
+# =============================================================================
+system:
+  trade_type: futures                    # [Required] futures | spot
+  trade_env: backtest                    # [Required] backtest | live
+  rebalancing_interval_hours: 8          # [Required] Rebalancing interval (hours). Fraction allowed: "5/60" = 5min
+  leverage: 5                            # Leverage (default: 5)
+  tz_str: "Asia/Seoul"                   # Timezone (default: UTC)
+
+# =============================================================================
+# STRATEGY - Strategy Settings
+# =============================================================================
+strategy:
+  name: your_strategy_name               # [Required] Strategy name (must match filename)
+  assets:                                # [Required] Trading assets (must end with USDT)
+    - BTCUSDT
+    - ETHUSDT
+    - XRPUSDT
+  frequency: "15m"                       # [Required] Data frequency: 1m | 5m | 15m | 1h | 1d
+
+  # [OPTIONAL] Custom parameters - structure is completely flexible
+  # You can define any nested structure that fits your strategy needs.
+  # Examples:
+  #   config:
+  #     window: 180
+  #     rsi_period: 14
+  #   OR
+  #   params:
+  #     indicators: {sma: 20, ema: 50}
+  #     thresholds: {buy: 30, sell: 70}
+
+# =============================================================================
+# BACKTEST - Backtest Only (Required when trade_env: backtest)
+# =============================================================================
+backtest:
+  data_apikey: "YOUR_DATA_API_KEY"       # [Required] Data API key
+  start_date: "2025-10-01 09:00"         # [Required] Start datetime
+  end_date: "2025-10-10 08:59"           # [Required] End datetime
+  lookback_bars: 220                     # [Required] SEE BELOW: must be >= max window/period used in strategy
+  initial_capital: 10000                 # [Required] Initial capital (USD)
+  generate_report: true                  # Generate Pyfolio report (default: true)
+
+# =============================================================================
+# LIVE - Live Trading Only (Required when trade_env: live)
+# =============================================================================
+# live:
+#   trading_hours: 720                   # Operating hours. 720 = 30 days
+#   data_apikey: "YOUR_API_KEY"
+#
+#   futures:                             # When trade_type: futures
+#     total_allocation: 0.8              # Capital allocation ratio (0~1)
+#     margin_mode: crossed               # crossed
+#     pos_mode: hedge_mode               # hedge_mode
+#
+#   spot:                                # When trade_type: spot
+#     quote_coin: usdt
+#     total_allocation: 0.8
+```
+
+### How Config is Passed to Strategy
+
+The `config_dict` parameter in the strategy function receives all keys under `strategy:` section:
+```python
+config_dict = {
+    "name": "your_strategy_name",             # [Required] From strategy.name
+    "assets": ["BTCUSDT", "ETHUSDT", ...],    # [Required] From strategy.assets
+    "frequency": "15m",                        # [Required] From strategy.frequency
+    # ... any other custom keys you define under strategy: section
+}
+```
+
+**Important:** The structure under `strategy:` is flexible. Only `name`, `assets`, and `frequency` are required.
+Any additional keys you define will be passed directly to `config_dict`.
+
+**DO NOT copy the example structure (base/position/sltp).** Design your own parameter structure based on your strategy's needs. Examples:
+```yaml
+# Simple flat structure
+strategy:
+  name: my_strategy
+  assets: [BTCUSDT, ETHUSDT]
+  frequency: "15m"
+  window: 200
+  rsi_period: 14
+  threshold: 30
+
+# Or nested structure
+strategy:
+  name: my_strategy
+  assets: [BTCUSDT]
+  frequency: "1h"
+  indicators:
+    sma_short: 20
+    sma_long: 50
+  rules:
+    buy_threshold: 0.02
+    sell_threshold: -0.02
+```
+
+---
+
+### CRITICAL: lookback_bars Calculation
+
+**Rule:** `lookback_bars` must be greater than or equal to the maximum historical data required by your strategy.
+
+```
+lookback_bars >= max(all window/period values used in strategy) + buffer (10~20%)
+```
+
+**When is historical data needed?**
+
+| Case | Example | Required lookback_bars |
+|------|---------|----------------------|
+| `get_history(window=N)` call | `get_history(assets, window=200, ...)` | >= 200 |
+| Moving Average | `talib.SMA(close, 50)` | >= 50 |
+| RSI calculation | `talib.RSI(close, 14)` | >= 14 |
+| Combined usage | `get_history(200)` then `SMA(50)` | >= 200 |
+
+**Calculation Example:**
+
+If your strategy uses:
+- `get_history(window=200)`
+- `talib.SMA(close, 20)` (short SMA)
+- `talib.SMA(close, 50)` (long SMA)
+- `talib.RSI(close, 14)`
+
+Then:
+```
+max(200, 20, 50, 14) = 200
+lookback_bars = 200 + buffer = 220 (recommended)
+```
+
+**Error when lookback_bars is too small:**
+```
+History window extends before YYYY-MM-DD. To use this history window,
+start the backtest on or after YYYY-MM-DD.
+```
+**Solution:** Increase `lookback_bars` to be >= the window requested in your strategy.
+
+---
+
+## Complete Example: RSI Mean Reversion Strategy
+
+**Note:** This is just ONE example. Design your own parameter names and structure based on YOUR strategy logic.
+
+### File: `rsi_mean_reversion.py`
 
 ```python
-# full content of strategy_config.py
+"""
+RSI Mean Reversion Strategy
+- Long when RSI < oversold threshold
+- Short when RSI > overbought threshold
+"""
+
+from module.data_context import DataContext
+import talib
+import numpy as np
+
+
+def strategy(context: DataContext, config_dict: dict) -> dict:
+
+    # [FIXED] Required parameters
+    assets = config_dict['assets']
+    frequency = config_dict.get("frequency", "1m")
+
+    # [CUSTOM] Your own parameter names - design based on YOUR strategy
+    window = config_dict.get("window", 100)
+    rsi_period = config_dict.get("rsi_period", 14)
+    oversold = config_dict.get("oversold", 30)
+    overbought = config_dict.get("overbought", 70)
+    stop_loss_pct = config_dict.get("stop_loss_pct", 0.02)
+    take_profit_pct = config_dict.get("take_profit_pct", 0.04)
+
+    # [FIXED] Get historical data
+    hist = context.get_history(
+        assets=assets,
+        window=window,
+        frequency=frequency,
+        fields=["close"]
+    )
+
+    if hist.empty:
+        return {}
+
+    df = hist["close"].unstack(level=0)
+    latest_prices = df.iloc[-1]
+
+    result = {}
+    num_assets = len(assets)
+    max_weight_per_asset = 1.0 / num_assets  # Equal distribution
+
+    for symbol in assets:
+        close_array = df[symbol].values
+        rsi = talib.RSI(close_array, timeperiod=rsi_period)
+        current_rsi = rsi[-1]
+        price = latest_prices[symbol]
+
+        if np.isnan(current_rsi):
+            weight = 0.0
+            sl, tp = None, None
+        elif current_rsi < oversold:
+            weight = max_weight_per_asset  # Long
+            sl = price * (1 - stop_loss_pct)
+            tp = price * (1 + take_profit_pct)
+        elif current_rsi > overbought:
+            weight = -max_weight_per_asset  # Short
+            sl = price * (1 + stop_loss_pct)
+            tp = price * (1 - take_profit_pct)
+        else:
+            weight = 0.0
+            sl, tp = None, None
+
+        result[symbol] = {
+            "weight": weight,
+            "presetStopLossPrice": sl,
+            "presetStopSurplusPrice": tp,
+        }
+
+    return result
 ```
 
-✅ Now generate the full Python code for the user’s requested strategy following these rules.
+### File: `config.yaml`
+
+```yaml
+version: "2.0"
+
+system:
+  trade_type: futures
+  trade_env: backtest
+  rebalancing_interval_hours: 4
+  leverage: 5
+  tz_str: "Asia/Seoul"
+
+strategy:
+  name: rsi_mean_reversion
+  assets:
+    - BTCUSDT
+    - ETHUSDT
+    - XRPUSDT
+  frequency: "15m"
+
+  # Custom parameters - YOUR OWN NAMING, not a fixed structure
+  window: 100
+  rsi_period: 14
+  oversold: 30
+  overbought: 70
+  stop_loss_pct: 0.02
+  take_profit_pct: 0.04
+
+backtest:
+  data_apikey: "YOUR_DATA_API_KEY"
+  start_date: "2025-10-01 09:00"
+  end_date: "2025-10-15 08:59"
+  lookback_bars: 120                     # >= window (100) + buffer
+  initial_capital: 10000
+  generate_report: true
+```
+
+---
+
+## Output Format Requirements
+
+When generating code, provide output in this exact format:
+
+### File: `{strategy_name}.py`
+
+```python
+# Full content of the strategy file
+```
+
+### File: `config.yaml`
+
+```yaml
+# Full content of the configuration file
+```
+
+---
+
+## Your Strategy Idea
+
+**Describe your strategy below:**
+
+(Example prompts you can use:)
+- "Create a simple moving average crossover strategy with 20 and 50 period SMAs"
+- "Implement RSI-based mean reversion: go long when RSI < 30, short when RSI > 70"
+- "Build a volatility breakout strategy using Bollinger Bands"
+- "Create a dual momentum strategy combining absolute and relative momentum"
+
+---
+
+Now generate the complete Python code and YAML configuration for my strategy.
