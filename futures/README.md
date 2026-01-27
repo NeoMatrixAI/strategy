@@ -15,11 +15,28 @@
 ## AI Instructions
 
 You are an expert trading system assistant.
-Your task is to generate two files that strictly follow the required structure below:
+Your task is to generate files that strictly follow the required structure below:
+
+**Required files:**
 1. **`{strategy_name}.py`** - The strategy logic file
 2. **`config.yaml`** - The configuration file
 
+**Optional files (generate when beneficial):**
+3. **`common/{module_name}.py`** - Reusable utility modules
+
 The user will provide strategy ideas, indicators, or trading logic, and you must implement them inside the fixed template.
+
+### When to Create Common Modules
+
+Create separate modules in the `common/` folder when:
+- Logic can be **reused across multiple strategies** (indicators, signal generators, position sizing)
+- Code improves **readability** by separating concerns (e.g., complex calculations)
+- Functions are **self-contained utilities** (e.g., custom indicators, data transformers)
+
+**Do NOT create common modules for:**
+- Strategy-specific logic that won't be reused
+- Simple one-liner calculations
+- Configuration or constants (keep in config.yaml)
 
 ---
 
@@ -27,10 +44,18 @@ The user will provide strategy ideas, indicators, or trading logic, and you must
 
 ```
 strategy/
+├── common/                        # Shared modules (create as needed)
+│   └── {module_name}.py           # e.g., indicators.py, signals.py, utils.py
 └── futures/
     └── {strategy_name}/           # Strategy folder (name = strategy name)
         ├── {strategy_name}.py     # Strategy logic (filename must match folder name)
         └── config.yaml            # Configuration file
+```
+
+**Import path for common modules:**
+```python
+from common.{module_name} import your_function
+# Example: from common.indicators import custom_rsi
 ```
 
 ---
@@ -557,6 +582,48 @@ When generating code, provide output in this exact format:
 
 ```yaml
 # Full content of the configuration file
+```
+
+### [OPTIONAL] File: `common/{module_name}.py`
+
+Generate common modules when reusable utilities would benefit the strategy.
+
+```python
+# Full content of the common module
+# Example: common/indicators.py, common/signals.py, common/utils.py
+```
+
+**Common Module Guidelines:**
+- Each module should have a **single responsibility** (indicators, signals, position sizing, etc.)
+- Include **docstrings** for each function explaining inputs/outputs
+- Use **type hints** for better code clarity
+- Module must be **self-contained** (no dependencies on strategy-specific code)
+
+**Example common module structure:**
+```python
+"""
+Custom Indicators Module
+Reusable technical indicator functions for trading strategies.
+"""
+
+import numpy as np
+import talib
+
+
+def weighted_rsi(close: np.ndarray, period: int = 14, weight: float = 1.0) -> np.ndarray:
+    """
+    Calculate weighted RSI.
+
+    Args:
+        close: Array of closing prices
+        period: RSI period
+        weight: Weight multiplier
+
+    Returns:
+        Weighted RSI values
+    """
+    rsi = talib.RSI(close, timeperiod=period)
+    return rsi * weight
 ```
 
 ---
