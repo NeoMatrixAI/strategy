@@ -140,7 +140,7 @@ from common.your_module import your_function
 hist = context.get_history(
     assets=assets,           # List of symbols, e.g., ["BTCUSDT", "ETHUSDT"]
     window=window,           # Lookback window (number of bars)
-    frequency=frequency,     # "1m" | "5m" | "15m" | "1h" | "1d"
+    frequency=frequency,     # "1m" | "5m" | "15m" | "1d"
     fields=["close"]         # Select from: ["open", "high", "low", "close", "volume"]
 )
 ```
@@ -327,7 +327,7 @@ strategy:
     - BTCUSDT
     - ETHUSDT
     - XRPUSDT
-  frequency: "15m"                       # [Required] Data frequency: 1m | 5m | 15m | 1h | 1d
+  frequency: "15m"                       # [Required] Data frequency: 1m | 5m | 15m | 1d
 
   # [OPTIONAL] Custom parameters - structure is completely flexible
   # You can define any nested structure that fits your strategy needs.
@@ -398,7 +398,7 @@ strategy:
 strategy:
   name: my_strategy
   assets: [BTCUSDT]
-  frequency: "1h"
+  frequency: "15m"
   indicators:
     sma_short: 20
     sma_long: 50
