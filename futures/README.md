@@ -262,7 +262,7 @@ def strategy(context: DataContext, config_dict: dict) -> dict:
     # Returns: MultiIndex DataFrame (asset, datetime) with OHLCV columns
     hist = context.get_history(
         assets=assets,
-        window=100,  # Adjust based on your strategy needs
+        window=window,  # From config (example: 100)
         frequency=frequency,
         fields=["close"]  # Select only the fields you need
     )
@@ -314,9 +314,9 @@ version: "2.0"
 system:
   trade_type: futures                    # [Required] futures | spot
   trade_env: backtest                    # [Required] backtest | live
-  rebalancing_interval_hours: 8          # [Required] Rebalancing interval (hours). Fraction allowed: "5/60" = 5min
-  leverage: 5                            # Leverage (default: 5)
-  tz_str: "Asia/Seoul"                   # Timezone (default: UTC)
+  rebalancing_interval_hours: 8          # [Required] Rebalancing interval (example: 8). Fraction allowed: "5/60" = 5min
+  leverage: 5                            # Leverage (example: 5)
+  tz_str: "Asia/Seoul"                   # Timezone (example: Asia/Seoul, default: UTC)
 
 # =============================================================================
 # STRATEGY - Strategy Settings
@@ -385,26 +385,22 @@ Any additional keys you define will be passed directly to `config_dict`.
 
 **DO NOT copy the example structure (base/position/sltp).** Design your own parameter structure based on your strategy's needs. Examples:
 ```yaml
-# Simple flat structure
+# Simple flat structure (example values - customize for your strategy)
 strategy:
   name: my_strategy
   assets: [BTCUSDT, ETHUSDT]
   frequency: "15m"
-  window: 200
-  rsi_period: 14
-  threshold: 30
+  your_param_1: ...                      # Define your own parameters
+  your_param_2: ...
 
-# Or nested structure
+# Or nested structure (example values - customize for your strategy)
 strategy:
   name: my_strategy
   assets: [BTCUSDT]
   frequency: "15m"
-  indicators:
-    sma_short: 20
-    sma_long: 50
-  rules:
-    buy_threshold: 0.02
-    sell_threshold: -0.02
+  your_section:
+    param_a: ...
+    param_b: ...
 ```
 
 ---
@@ -451,7 +447,7 @@ start the backtest on or after YYYY-MM-DD.
 
 ## Complete Example: RSI Mean Reversion Strategy
 
-**Note:** This is just ONE example. Design your own parameter names and structure based on YOUR strategy logic.
+**Note:** This is just ONE example with example values. Design your own parameter names, structure, and values based on YOUR strategy logic. Do NOT copy these values blindly.
 
 ### File: `rsi_mean_reversion.py`
 
@@ -474,12 +470,13 @@ def strategy(context: DataContext, config_dict: dict) -> dict:
     frequency = config_dict.get("frequency", "1m")
 
     # [CUSTOM] Your own parameter names - design based on YOUR strategy
-    window = config_dict.get("window", 100)
-    rsi_period = config_dict.get("rsi_period", 14)
-    oversold = config_dict.get("oversold", 30)
-    overbought = config_dict.get("overbought", 70)
-    stop_loss_pct = config_dict.get("stop_loss_pct", 0.02)
-    take_profit_pct = config_dict.get("take_profit_pct", 0.04)
+    # Default values below are examples only
+    window = config_dict.get("window", 100)           # example default
+    rsi_period = config_dict.get("rsi_period", 14)    # example default
+    oversold = config_dict.get("oversold", 30)        # example default
+    overbought = config_dict.get("overbought", 70)    # example default
+    stop_loss_pct = config_dict.get("stop_loss_pct", 0.02)    # example default
+    take_profit_pct = config_dict.get("take_profit_pct", 0.04) # example default
 
     # [FIXED] Get historical data
     hist = context.get_history(
@@ -497,7 +494,6 @@ def strategy(context: DataContext, config_dict: dict) -> dict:
 
     result = {}
     num_assets = len(assets)
-    max_weight_per_asset = 1.0 / num_assets  # Equal distribution
 
     for symbol in assets:
         close_array = df[symbol].values
@@ -509,11 +505,11 @@ def strategy(context: DataContext, config_dict: dict) -> dict:
             weight = 0.0
             sl, tp = None, None
         elif current_rsi < oversold:
-            weight = max_weight_per_asset  # Long
+            weight = 0.3  # Long (example weight - customize based on your strategy)
             sl = price * (1 - stop_loss_pct)
             tp = price * (1 + take_profit_pct)
         elif current_rsi > overbought:
-            weight = -max_weight_per_asset  # Short
+            weight = -0.3  # Short (example weight - customize based on your strategy)
             sl = price * (1 + stop_loss_pct)
             tp = price * (1 - take_profit_pct)
         else:
@@ -537,32 +533,32 @@ version: "2.0"
 system:
   trade_type: futures
   trade_env: backtest
-  rebalancing_interval_hours: 4
-  leverage: 5
-  tz_str: "Asia/Seoul"
+  rebalancing_interval_hours: 4          # (example)
+  leverage: 5                            # (example)
+  tz_str: "Asia/Seoul"                   # (example)
 
 strategy:
   name: rsi_mean_reversion
-  assets:
+  assets:                                # (example assets)
     - BTCUSDT
     - ETHUSDT
     - XRPUSDT
   frequency: "15m"
 
-  # Custom parameters - YOUR OWN NAMING, not a fixed structure
-  window: 100
-  rsi_period: 14
-  oversold: 30
-  overbought: 70
-  stop_loss_pct: 0.02
-  take_profit_pct: 0.04
+  # Custom parameters - ALL VALUES BELOW ARE EXAMPLES
+  window: 100                            # (example)
+  rsi_period: 14                         # (example)
+  oversold: 30                           # (example)
+  overbought: 70                         # (example)
+  stop_loss_pct: 0.02                    # (example)
+  take_profit_pct: 0.04                  # (example)
 
 backtest:
   data_apikey: "YOUR_DATA_API_KEY"
-  start_date: "2025-10-01 09:00"
-  end_date: "2025-10-15 08:59"
-  lookback_bars: 120                     # >= window (100) + buffer
-  initial_capital: 10000
+  start_date: "2025-10-01 09:00"         # (example)
+  end_date: "2025-10-15 08:59"           # (example)
+  lookback_bars: 120                     # (example) >= window + buffer
+  initial_capital: 10000                 # (example)
   generate_report: true
 ```
 
@@ -610,9 +606,10 @@ import numpy as np
 import talib
 
 
-def weighted_rsi(close: np.ndarray, period: int = 14, weight: float = 1.0) -> np.ndarray:
+def weighted_rsi(close: np.ndarray, period: int, weight: float) -> np.ndarray:
     """
-    Calculate weighted RSI.
+    Example: Calculate weighted RSI.
+    This is just an example function - create your own based on your strategy needs.
 
     Args:
         close: Array of closing prices
