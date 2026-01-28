@@ -14,9 +14,12 @@
 
 ```
 strategy/
+├── common/                              # 재사용 가능한 유틸리티 모듈 (커스텀 모듈)
+│   ├── momentum_utils.py                # 예시: 모멘텀 계산 유틸리티
+│   └── sltp_utils.py                    # 예시: 손절/익절 유틸리티
 ├── futures/
 │   └── multi_period_momentum/
-│       ├── multi_period_momentum.py    # 전략 로직
+│       ├── multi_period_momentum.py     # 전략 로직
 │       └── config.yaml                  # 설정 (시스템, 전략, 백테스트/실거래 설정)
 └── spot/
     └── your_strategy/
@@ -29,6 +32,59 @@ strategy/
 
 하지만 `nb-runner` 환경에서는 여기에 포함된 것뿐 아니라
 사용자 맞춤형 전략과 설정 파일을 자유롭게 사용할 수 있습니다.
+
+---
+
+### 📦 커스텀 모듈 (common/ 폴더)
+
+`common/` 폴더는 여러 전략에서 공유할 수 있는 **재사용 가능한 유틸리티 모듈**을 저장하는 데 사용됩니다.
+
+**중요:** 커스텀 전략에서 import 경로는 반드시 `from common.xxx import ...` 형식을 사용해야 합니다. 서버에서 사용자가 업로드한 모듈을 `common/` 폴더로 매핑하기 때문입니다.
+
+#### 사용 가능한 모듈
+
+| 모듈 | 설명 |
+|------|------|
+| `momentum_utils.py` | 모멘텀 계산 및 가중치 정규화 유틸리티 |
+| `sltp_utils.py` | 손절/익절 가격 계산 유틸리티 |
+
+#### Import 예시
+
+```python
+# [FIXED] Import 경로: 항상 'from common.xxx' 사용
+from common.momentum_utils import calculate_momentum, normalize_weights
+from common.sltp_utils import compute_sltp
+```
+
+#### 나만의 모듈 만들기
+
+1. `common/` 폴더에 새로운 `.py` 파일을 생성합니다
+2. 재사용 가능한 함수나 클래스를 정의합니다
+3. 전략에서 `from common.your_module import your_function`으로 import합니다
+
+**예시: custom_indicators.py**
+```python
+# common/custom_indicators.py
+import pandas as pd
+
+def calculate_rsi(prices: pd.Series, period: int = 14) -> pd.Series:
+    """RSI(상대강도지수) 계산"""
+    delta = prices.diff()
+    gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+    rs = gain / loss
+    return 100 - (100 / (1 + rs))
+```
+
+**전략에서 사용:**
+```python
+from common.custom_indicators import calculate_rsi
+
+def strategy(context: DataContext, config_dict: dict) -> dict:
+    # ... 히스토리 데이터 조회 ...
+    rsi = calculate_rsi(close_prices, period=14)
+    # ... 전략 로직 ...
+```
 
 ---
 
@@ -53,6 +109,25 @@ strategy/
   - [선물 전략 가이드](../futures/README.md)
 
 > `strategy()` 함수 작성법, 입출력 형식, 필수 구조, 설정 방법 및 예제 코드가 단계별로 설명되어 있습니다.
+
+---
+
+### 🤖 AI로 전략 생성하기 (권장)
+
+Claude, GPT, Gemini 등의 AI 어시스턴트를 사용하여 쉽게 전략을 만들 수 있습니다.
+
+**사용 방법:**
+1. [선물 전략 가이드](../futures/README.md)의 전체 내용을 복사합니다
+2. AI 어시스턴트 (Claude, GPT, Gemini 등)에 붙여넣습니다
+3. 원하는 전략 아이디어를 자연어로 설명합니다
+4. AI가 호환되는 `{strategy_name}.py`와 `config.yaml` 파일을 생성합니다
+
+**프롬프트 예시:**
+- "20일과 50일 이동평균선 교차 전략을 만들어줘"
+- "RSI 기반 평균 회귀 전략: RSI < 30이면 롱, RSI > 70이면 숏"
+- "볼린저 밴드를 사용한 변동성 돌파 전략을 만들어줘"
+
+> AI 프롬프트 가이드에는 프로덕션 수준의 전략 코드를 생성하기 위한 모든 템플릿, 데이터 형식, 예제가 포함되어 있습니다.
 
 ---
 

@@ -19,9 +19,12 @@ Example:
 
 ```
 strategy/
+├── common/                              # Reusable utility modules (custom modules)
+│   ├── momentum_utils.py                # Example: momentum calculation utilities
+│   └── sltp_utils.py                    # Example: stop-loss/take-profit utilities
 ├── futures/
 │   └── multi_period_momentum/
-│       ├── multi_period_momentum.py    # Strategy logic
+│       ├── multi_period_momentum.py     # Strategy logic
 │       └── config.yaml                  # Configuration (system, strategy, backtest/live settings)
 └── spot/
     └── your_strategy/
@@ -34,6 +37,59 @@ No executable notebooks or API modules are included here.
 
 However, you are free to use your own custom strategies and configuration files in the `nb-runner` environment,
 not limited to the ones provided in this repository.
+
+---
+
+### 📦 Custom Modules (common/ folder)
+
+The `common/` folder is used to store **reusable utility modules** that can be shared across multiple strategies.
+
+**Important:** In custom strategies, import paths must use `from common.xxx import ...` format, as the server maps user-uploaded modules to the `common/` folder.
+
+#### Available Modules
+
+| Module | Description |
+|--------|-------------|
+| `momentum_utils.py` | Momentum calculation and weight normalization utilities |
+| `sltp_utils.py` | Stop-loss and take-profit price calculation utilities |
+
+#### Import Example
+
+```python
+# [FIXED] Import path: always use 'from common.xxx'
+from common.momentum_utils import calculate_momentum, normalize_weights
+from common.sltp_utils import compute_sltp
+```
+
+#### Creating Your Own Module
+
+1. Create a new `.py` file in the `common/` folder
+2. Define reusable functions or classes
+3. Import in your strategy using `from common.your_module import your_function`
+
+**Example: custom_indicators.py**
+```python
+# common/custom_indicators.py
+import pandas as pd
+
+def calculate_rsi(prices: pd.Series, period: int = 14) -> pd.Series:
+    """Calculate Relative Strength Index"""
+    delta = prices.diff()
+    gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+    rs = gain / loss
+    return 100 - (100 / (1 + rs))
+```
+
+**Usage in strategy:**
+```python
+from common.custom_indicators import calculate_rsi
+
+def strategy(context: DataContext, config_dict: dict) -> dict:
+    # ... get historical data ...
+    rsi = calculate_rsi(close_prices, period=14)
+    # ... strategy logic ...
+```
 
 ---
 
@@ -58,6 +114,25 @@ We also provide guides for creating spot and futures strategy modules and settin
   - [Futures Strategy Guide](./futures/README.md)
 
 > The `strategy()` function writing method, input/output format, required structure, setup method, and example code are explained step by step.
+
+---
+
+### 🤖 Generate Strategy with AI (Recommended)
+
+You can easily create strategies using AI assistants like Claude, GPT, or Gemini.
+
+**How to use:**
+1. Copy the entire contents of [Futures Strategy Guide](./futures/README.md)
+2. Paste it into your AI assistant (Claude, GPT, Gemini, etc.)
+3. Describe your strategy idea in natural language
+4. The AI will generate compatible `{strategy_name}.py` and `config.yaml` files
+
+**Example prompts:**
+- "Create a simple moving average crossover strategy with 20 and 50 period SMAs"
+- "Implement RSI-based mean reversion: go long when RSI < 30, short when RSI > 70"
+- "Build a volatility breakout strategy using Bollinger Bands"
+
+> The AI Prompt guide includes all required templates, data formats, and examples to generate production-ready strategy code.
 
 ---
 
