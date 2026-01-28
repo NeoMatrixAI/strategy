@@ -46,8 +46,8 @@ import pandas as pd
 
 def parse_frequency_to_minutes(frequency: str) -> int:
     """
-    Convert frequency string to minutes.
-    Example: "1m" -> 1, "5m" -> 5, "15m" -> 15, "1h" -> 60, "1d" -> 1440
+    frequency 문자열을 분 단위로 변환
+    예: "1m" -> 1, "5m" -> 5, "15m" -> 15, "1h" -> 60, "1d" -> 1440
     """
     freq = frequency.lower().strip()
     if freq.endswith("m"):
@@ -74,8 +74,8 @@ def strategy(context: DataContext, config_dict: dict) -> dict:
 
     window = base_config.get("window", 180)
 
-    # lookback_hours: Hours used for momentum calculation
-    # Example: [1, 3, 6] -> Compare with prices from 1h, 3h, 6h ago
+    # lookback_hours: 모멘텀 계산에 사용할 시간 (시간 단위)
+    # 예: [1, 3, 6] -> 1시간 전, 3시간 전, 6시간 전 가격과 비교
     lookback_hours = base_config.get("lookback_hours", [1, 3, 6])
 
     long_ratio = position_config.get("long_ratio", 0.7)
@@ -83,10 +83,10 @@ def strategy(context: DataContext, config_dict: dict) -> dict:
     stop_loss_pct = sltp_config.get("stop_loss_pct", 0.02)
     take_profit_pct = sltp_config.get("take_profit_pct", 0.04)
 
-    # Convert frequency to minutes and calculate lookback periods in bars
+    # frequency를 분 단위로 변환하여 lookback_hours를 bar 수로 변환
     bar_minutes = parse_frequency_to_minutes(frequency)
-    # Hours -> Minutes -> Bar count
-    # Example: lookback_hours=[1,3,6], bar_minutes=15 -> periods=[4, 12, 24] bars
+    # 시간 -> 분 -> bar 수
+    # 예: lookback_hours=[1,3,6], bar_minutes=15 -> periods=[4, 12, 24] bars
     periods = [int(h * 60 / bar_minutes) for h in lookback_hours]
 
     # [FIXED] context.get_history(assets=, window=, frequency=, fields=)
