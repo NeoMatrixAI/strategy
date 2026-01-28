@@ -36,7 +36,7 @@ def normalize_weights(momentum: dict, long_ratio: float, short_ratio: float) -> 
     for k, v in shorts.items():
         weights[k] = (v / total_short) * short_ratio if total_short != 0 else 0
 
-    # 스케일 조정
+    # Scale adjustment
     abs_sum = sum(abs(w) for w in weights.values())
     if abs_sum > 1:
         scale = 1.0 / abs_sum
