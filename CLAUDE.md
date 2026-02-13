@@ -215,8 +215,18 @@ def calculate_momentum(df: pd.DataFrame, periods: list) -> dict:
 
 ### 🔄 Documentation Sync Rule (CRITICAL)
 
-**When modifying `README.md`, you MUST also update the translated versions:**
+**When modifying documentation, you MUST also update the translated versions:**
+
+Main README (`README.md`):
 - Korean: `docs/README.ko.md`
 - Chinese: `docs/README.zh-CN.md`
 
-All three documentation files must stay in sync.
+Futures Strategy Guide (`futures/README.md`):
+- Korean: `docs/Strategy.README.futures.ko.md`
+- Chinese: `docs/Strategy.README.futures.zh-CN.md`
+
+Spot Strategy Guide (`spot/README.md`):
+- Korean: `docs/Strategy.README.spot.ko.md`
+- Chinese: `docs/Strategy.README.spot.zh-CN.md`
+
+All documentation files must stay in sync with their translations.
