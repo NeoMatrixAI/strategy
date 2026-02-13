@@ -4,30 +4,29 @@ version: "2.0"
 # SYSTEM - Common Settings
 # =============================================================================
 system:
-  data_apikey: "YOUR_DATA_API_KEY"  # [Required] Data API key
-  user_key: "YOUR_USER_KEY"         # [Required] User API key
-  trade_type: futures                    # [Required] futures | spot
-  trade_env: backtest                    # [Required] backtest | live
-  rebalancing_interval_hours: 8          # [Required] Rebalancing interval (hours). Fraction allowed: "5/60" = 5min
-  leverage: 5                            # [futures only] Leverage (default: 5). Ignored for spot.
-  tz_str: "Asia/Seoul"                   # Timezone (default: UTC)
+  data_apikey: "YOUR_DATA_API_KEY"         # [Required] Data API key
+  user_key: "YOUR_USER_KEY"                # [Required] User API key
+  trade_type: spot                         # [Required] futures | spot
+  trade_env: backtest                      # [Required] backtest | live
+  rebalancing_interval_hours: 8            # [Required] Rebalancing interval (hours). Fraction allowed: "5/60" = 5min
+  # leverage: 5                            # [futures only] Not used for spot trading
+  tz_str: "Asia/Seoul"                     # Timezone (default: UTC)
 
 # =============================================================================
 # STRATEGY - Strategy Settings
 # =============================================================================
 strategy:
-  name: multi_period_momentum            # [Required] Strategy name (must match filename)
+  name: multi_period_momentum              # [Required] Strategy name (must match filename)
   assets: [BTCUSDT, ETHUSDT, XRPUSDT, BCHUSDT, LTCUSDT, ADAUSDT]  # [Required] Trading assets (must end with USDT)
-  frequency: "15m"                       # Data frequency: 1m | 5m | 15m | 1d (default: 1m)
+  frequency: "15m"                         # Data frequency: 1m | 5m | 15m | 1d (default: 1m)
 
-  config: # or strategy_config
+  config:
     base:
       window: 200
       lookback_hours: [1, 3, 6]
 
     position:
-      long_ratio: 0.6
-      short_ratio: 0.4
+      long_ratio: 0.8                      # Spot: long only, no short_ratio
 
     sltp:
       stop_loss_pct: 0.1
@@ -37,29 +36,28 @@ strategy:
 # BACKTEST - Backtest Only (Required when trade_env: backtest)
 # =============================================================================
 backtest:
-  start_date: "2025-11-01 09:00"         # [Required] Start datetime
-  end_date: "2025-11-30 08:59"           # [Required] End datetime
-  lookback_bars: 200                     # [Required] Past bars needed for strategy initialization
-  initial_capital: 10000                 # [Required] Initial capital (USD)
-  generate_report: true                  # Generate Pyfolio report (default: true)
+  start_date: "2025-11-01 09:00"           # [Required] Start datetime
+  end_date: "2025-11-30 08:59"             # [Required] End datetime
+  lookback_bars: 200                       # [Required] Past bars needed for strategy initialization
+  initial_capital: 10000                   # [Required] Initial capital (USD)
+  generate_report: true                    # Generate Pyfolio report (default: true)
 
 # =============================================================================
 # LIVE - Live/Demo Trading Only (Required when trade_env: live | demo)
 # =============================================================================
 live:
-  trading_hours: 720                   # Operating hours. 720 = 30 days
+  trading_hours: 720                       # Operating hours. 720 = 30 days
 
   # --- Futures settings (when trade_type: futures) ---
   futures:
-    total_allocation: 0.8              # Capital allocation ratio (0~1)
-    margin_mode: crossed               # isolated | crossed
-    pos_mode: hedge_mode               # hedge_mode | one_way
+    total_allocation: 0.8                  # Capital allocation ratio (0~1)
+    margin_mode: crossed                   # isolated | crossed
+    pos_mode: hedge_mode                   # hedge_mode | one_way
 
   # --- Spot settings (when trade_type: spot) ---
   spot:
-    quote_coin: usdt                   # Quote currency (default: usdt)
-    total_allocation: 0.8              # Capital allocation ratio (0~1)
-
+    quote_coin: usdt                       # Quote currency (default: usdt)
+    total_allocation: 0.8                  # Capital allocation ratio (0~1)
 
 # =============================================================================
 # HPO - Hyperparameter Optimization Settings (AIAuto)
@@ -73,10 +71,9 @@ live:
 #   - categorical: {type: categorical, choices: ["a", "b", "c"]}
 #
 # Parameter path rules:
-#   - "base.window" → overrides strategy.config.base.window
-#   - "position.long_ratio" → overrides strategy.config.position.long_ratio
-#   - "rebalancing_interval_hours" → overrides system.rebalancing_interval_hours
-#   - "frequency" → cannot be used in parameter combinations
+#   - "base.window" -> overrides strategy.config.base.window
+#   - "position.long_ratio" -> overrides strategy.config.position.long_ratio
+#   - "rebalancing_interval_hours" -> overrides system.rebalancing_interval_hours
 
 hpo:
   enabled: true
@@ -96,17 +93,10 @@ hpo:
         - [1, 4, 12]
         - [2, 6, 24]
 
-    # # ※ long_ratio + short_ratio must be <= 1.0 (validated in objective)
     # position.long_ratio:
     #   type: float
-    #   min: 0.4
-    #   max: 0.7
-    #   step: 0.1
-
-    # position.short_ratio:
-    #   type: float
-    #   min: 0.2
-    #   max: 0.5
+    #   min: 0.5
+    #   max: 0.9
     #   step: 0.1
 
     # sltp.stop_loss_pct:
