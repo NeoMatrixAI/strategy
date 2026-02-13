@@ -1,273 +1,689 @@
-# Strategy Guide
+# Spot Strategy Development Guide - AI Prompt
 
-> 📚 This README is available in multiple languages:  
-> - 🇺🇸 English (default) — this file  
-> - 🇰🇷 [한국어](./README_KOR.md) 🇰🇷  
-> - 🇨🇳 [中文](./README_CHN.md) 🇨🇳
----
-
-## 📘 How to Implement Your Own Strategy
-
-This guide is designed for users who may not be familiar with coding. 
-It provides a simple step-by-step explanation for building a custom strategy function. The example below is for reference, and users can develop their own logic by following the same structure.
+> **Trade Type: Spot**
+>
+> This README is available in multiple languages:
+> - English (default) - this file
+> - [Korean](../docs/Strategy.README.spot.ko.md)
+> - [Chinese](../docs/Strategy.README.spot.zh-CN.md)
 
 ---
 
-## ✅ Required Structure (Fixed Rules)
+> Copy this entire README and paste it to Claude, GPT, Gemini, or any AI assistant.
+> Then describe your strategy idea, and the AI will generate compatible code for this system.
 
-- Function name must be `strategy`
-- Function inputs: `df`, `config_dict`
-- Function outputs: a dictionary where each key is a symbol (e.g., "BTCUSDT") and the value contains the trade information as follows:
+---
+
+## AI Instructions
+
+You are an expert trading system assistant.
+Your task is to generate files that strictly follow the required structure below:
+
+**Required files:**
+1. **`{strategy_name}.py`** - The strategy logic file
+2. **`config.yaml`** - The configuration file
+
+**Optional files (generate when beneficial):**
+3. **`common/{module_name}.py`** - Reusable utility modules
+
+The user will provide strategy ideas, indicators, or trading logic, and you must implement them inside the fixed template.
+
+### When to Create Common Modules
+
+Create separate modules in the `common/` folder when:
+- Logic can be **reused across multiple strategies** (indicators, signal generators, position sizing)
+- Code improves **readability** by separating concerns (e.g., complex calculations)
+- Functions are **self-contained utilities** (e.g., custom indicators, data transformers)
+
+**Do NOT create common modules for:**
+- Strategy-specific logic that won't be reused
+- Simple one-liner calculations
+- Configuration or constants (keep in config.yaml)
+
+---
+
+## Spot Trading Rules (CRITICAL)
+
+**This system is for SPOT trading. The following constraints MUST be followed:**
+
+1. **Long only** - Spot trading CANNOT short sell. All weights must be >= 0.
+2. **No leverage** - Spot trading does not use leverage.
+3. **Weight = 0 means sell** - Setting weight to 0 (or omitting the symbol) will sell the entire holding.
+4. **Take Profit field** - Use `presetTakeProfitPrice` (NOT `presetStopSurplusPrice` which is for futures).
+
+---
+
+## System Architecture Overview
+
+```
+strategy/
+├── common/                        # Shared modules (create as needed)
+│   └── {module_name}.py           # e.g., indicators.py, signals.py, utils.py
+└── spot/
+    └── {strategy_name}/           # Strategy folder (name = strategy name)
+        ├── {strategy_name}.py     # Strategy logic (filename must match folder name)
+        └── config.yaml            # Configuration file
+```
+
+**Import path for common modules:**
 ```python
-"symbol" : {
-    "size": str(size),                     # Position size or ratio as a string
-    "presetTakeProfitPrice": str(preset_take),   # Pre-set take profit price
-    "executeTakeProfitPrice": str(execute_take), # Executed take profit price
-    "presetStopLossPrice": str(preset_stop),     # Pre-set stop loss price
-    "executeStopLossPrice": str(execute_stop)    # Executed stop loss price
+from common.{module_name} import your_function
+# Example: from common.indicators import custom_rsi
+```
+
+---
+
+## Required Package Versions (CRITICAL)
+
+**You MUST write code compatible with these exact package versions.**
+The system uses these versions for both backtesting and live trading.
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| pandas | 1.5.3 | DataFrame processing |
+| numpy | 1.24.4 | Numerical operations |
+| ta-lib | 0.4.30 | Technical indicators (RSI, MACD, SMA, EMA, etc.) |
+| scipy | 1.10.1 | Statistical/mathematical functions |
+
+### TA-Lib Usage Examples
+
+```python
+import talib
+import numpy as np
+
+# Convert pandas Series to numpy array for TA-Lib
+close_array = df["close"].values
+
+# Simple Moving Average
+sma_20 = talib.SMA(close_array, timeperiod=20)
+
+# Exponential Moving Average
+ema_12 = talib.EMA(close_array, timeperiod=12)
+
+# RSI (Relative Strength Index)
+rsi = talib.RSI(close_array, timeperiod=14)
+
+# MACD
+macd, macd_signal, macd_hist = talib.MACD(close_array, fastperiod=12, slowperiod=26, signalperiod=9)
+
+# Bollinger Bands
+upper, middle, lower = talib.BBANDS(close_array, timeperiod=20, nbdevup=2, nbdevdn=2)
+
+# ATR (Average True Range) - requires high, low, close
+atr = talib.ATR(high_array, low_array, close_array, timeperiod=14)
+
+# Stochastic
+slowk, slowd = talib.STOCH(high_array, low_array, close_array,
+                           fastk_period=14, slowk_period=3, slowd_period=3)
+```
+
+### Important Compatibility Notes
+
+1. **pandas 1.5.3**: Use `.iloc[]` for positional indexing, `.loc[]` for label-based indexing
+2. **numpy 1.24.4**: `np.NaN` is deprecated, use `np.nan` instead
+3. **ta-lib 0.4.30**: Input must be numpy arrays, not pandas Series (use `.values`)
+4. **scipy 1.10.1**: Available for advanced statistical calculations
+
+---
+
+## Part 1: Strategy File (`{strategy_name}.py`)
+
+### Fixed Rules (MUST Follow)
+
+1. **Function name** must be `strategy`
+2. **Function signature** must be exactly:
+```python
+def strategy(context: DataContext, config_dict: dict) -> dict:
+```
+
+3. **Required import**:
+```python
+from module.data_context import DataContext
+```
+
+4. **Optional imports** (from common folder - user uploaded modules):
+```python
+from common.your_module import your_function
+```
+
+### Data Request API
+
+```python
+# [FIXED] Get historical OHLCV data
+hist = context.get_history(
+    assets=assets,           # List of symbols, e.g., ["BTCUSDT", "ETHUSDT"]
+    window=window,           # Lookback window (number of bars)
+    frequency=frequency,     # "1m" | "5m" | "15m" | "1d"
+    fields=["close"]         # Select from: ["open", "high", "low", "close", "volume"]
+)
+```
+
+### Data Format (MultiIndex DataFrame)
+
+The `hist` DataFrame has a MultiIndex with levels `["asset", "datetime"]`:
+
+```
+                                        open      high      low     close    volume
+asset    datetime
+BTCUSDT  2025-11-13 04:01:00+00:00    100.0    100.2     99.7    100.0    37215.0
+         2025-11-13 04:02:00+00:00    100.0    100.5     99.8    100.3    42156.0
+ETHUSDT  2025-11-13 04:01:00+00:00    105.1    105.1    104.7    105.0    74304.2
+         2025-11-13 04:02:00+00:00    105.0    105.3    104.9    105.2    68421.5
+```
+
+**Common data manipulation patterns:**
+```python
+# Get single column as DataFrame (assets as columns, datetime as index)
+df = hist["close"].unstack(level=0)
+
+# Result:
+#                            BTCUSDT   ETHUSDT
+# datetime
+# 2025-11-13 04:01:00+00:00   100.0    105.0
+# 2025-11-13 04:02:00+00:00   100.3    105.2
+
+# Get latest prices
+latest_prices = df.iloc[-1]
+```
+
+### Return Format (MUST Follow - SPOT)
+
+```python
+{
+    "SYMBOL": {
+        "weight": float,                  # Must be >= 0 (long only, no shorting)
+        "presetTakeProfitPrice": float,   # Take profit price (can be None)
+        "presetStopLossPrice": float      # Stop loss price (can be None)
+    }
 }
-
-```
-- Configuration must be accessed like this:
-```python
-strategy_specific_config = config_dict.get('strategy_config')
 ```
 
-Your strategy settings must be defined in a file (e.g., `strategy_config.py`) as follows:
+**Optional additional TP/SL fields (for advanced control):**
 ```python
-# strategy-config.py example
-strategy_config = {
-        "parameter_1": 10,
-        "parameter_2": 30,
-        "parameter_3": 0.5
-        }
+{
+    "SYMBOL": {
+        "weight": float,
+        "presetTakeProfitPrice": float,
+        "presetStopLossPrice": float,
+        "executeTakeProfitPrice": float,    # Optional: execute take profit price
+        "executeStopLossPrice": float       # Optional: execute stop loss price
+    }
+}
 ```
 
-> ⚠️ The system will wrap this `strategy_config` into a `config_dict` and pass it to the strategy like this:
+**Weight Rules (SPOT - Long Only):**
+- **All weights must be >= 0** (spot trading cannot short)
+- **weight = 0** means no position / sell entire holding if currently held
+- **Omitting a symbol** from the return dict means it will be fully sold if currently held
+- **Sum of all weights must NOT exceed 1.0**: `sum(weight) <= 1.0`
+- Each weight represents the proportion of allocated capital for that symbol
 
+**Example return:**
 ```python
-result = strategy.strategy(df, {'strategy_config': config.strategy_config})
+return {
+    "BTCUSDT": {"weight": 0.5, "presetTakeProfitPrice": 105000.0, "presetStopLossPrice": 98000.0},
+    "ETHUSDT": {"weight": 0.3, "presetTakeProfitPrice": 4200.0, "presetStopLossPrice": 3500.0},
+    "XRPUSDT": {"weight": 0.2, "presetTakeProfitPrice": None, "presetStopLossPrice": None}
+}
 ```
 
----
-
-## 🧾 Structure of Input Data (`df`)
-
-The `df` passed into the strategy function is a **time series price DataFrame**, with:
-
-- **Index (rows)**: Timestamps (minute frequency)
-- **Columns**: Asset symbols (e.g., BTCUSDT, ETHUSDT, etc.)
-- **Values**: Closing prices at each timestamp (float)
-
-Example layout:
-
-| Time               | BTCUSDT | ETHUSDT | XRPUSDT | ... |
-|--------------------|---------|---------|---------|-----|
-| 2025-04-13 00:00:00| 84817.0 | 1655.26 | 2.1568  | ... |
-| 2025-04-13 00:01:00| 84836.7 | 1655.39 | 2.1565  | ... |
-| 2025-04-13 00:02:00| 84891.7 | 1656.20 | 2.1593  | ... |
-
-> ✅ The strategy uses this DataFrame to select long and short candidates based on your logic.
-
----
-
-## 🪄 Strategy Example: Simple SMA Strategy
+### Strategy File Template
 
 ```python
-# strategy.py
-import pandas as pd
+"""
+{Strategy Name}
+
+=== FIXED VALUES (DO NOT CHANGE) ===
+
+1. Import Path
+   - from common.xxx import ... (FIXED)
+   - Server uses user-specific common folder for uploaded module files
+
+2. Function Signature
+   - def strategy(context: DataContext, config_dict: dict) -> dict (FIXED)
+
+3. Config Access
+   - assets = config_dict['assets'] (FIXED)
+   - frequency = config_dict.get("frequency", "1m") (FIXED)
+   - Other config_dict parameters are custom per strategy
+
+4. History API
+   - context.get_history(assets=, window=, frequency=, fields=) (FIXED)
+   - fields: list of required columns from ohlcv (e.g., ["close"], ["open", "high", "low", "close"])
+   - Returns: MultiIndex DataFrame (asset, datetime)
+
+5. Return Format (FIXED - SPOT)
+   {
+       "SYMBOL": {
+           "weight": float,              # >= 0, long only, sum <= 1.0
+           "presetTakeProfitPrice": float, # can be None
+           "presetStopLossPrice": float    # can be None
+       }
+   }
+"""
+
+# [FIXED] Import: from module.data_context
+from module.data_context import DataContext
+
+# [OPTIONAL] Import custom modules from common folder
+# from common.your_module import your_function
 
 import pandas as pd
 import numpy as np
 
-def strategy(df: pd.DataFrame, config_dict: dict) -> dict:
-    """
-    SMA strategy for test
-    """
 
-    # Get settings
-    strategy_specific_config = config_dict.get('strategy_config')
-    
-    if not isinstance(df, pd.DataFrame):
-        raise TypeError("Input must be a pandas DataFrame.")
+# [FIXED] def strategy(context: DataContext, config_dict: dict) -> dict
+def strategy(context: DataContext, config_dict: dict) -> dict:
 
-    sma_short_period = strategy_specific_config.get("sma_short")
-    sma_long_period = strategy_specific_config.get("sma_long")
-    take_profit_ratio = strategy_specific_config.get("take_profit_ratio")
-    stop_loss_ratio = strategy_specific_config.get("stop_loss_ratio")
+    # [FIXED] assets, frequency from config_dict
+    assets = config_dict['assets']
+    frequency = config_dict.get("frequency", "1m")
 
+    # [CUSTOM] Strategy-specific parameters from config
+    # Access nested config like: config_dict['config']['your_section']['param']
+    # Example:
+    # base_config = config_dict['config']['base']
+    # window = base_config.get("window", 180)
+
+    # [FIXED] context.get_history(assets=, window=, frequency=, fields=)
+    # Returns: MultiIndex DataFrame (asset, datetime) with OHLCV columns
+    hist = context.get_history(
+        assets=assets,
+        window=window,  # From config (example: 100)
+        frequency=frequency,
+        fields=["close"]  # Select only the fields you need
+    )
+
+    if hist.empty:
+        return {}
+
+    # === YOUR STRATEGY LOGIC HERE ===
+
+    # Example: Convert to DataFrame with assets as columns
+    df = hist["close"].unstack(level=0)
+    latest_prices = df.iloc[-1]
+
+    # Calculate your signals and weights...
+    weights = {}  # Your logic to calculate weights
+
+    # Build result
     result = {}
-    symbols = df.columns
-    df = df.copy()
+    for symbol in assets:
+        weight = weights.get(symbol, 0.0)
+        price = latest_prices[symbol]
 
-    for symbol in symbols:
-        close = df[symbol].astype(float)
-        
-        # Calculate SMA manually
-        sma_short = close.rolling(window=sma_short_period).mean()
-        sma_long = close.rolling(window=sma_long_period).mean()
+        # SPOT: weight must be >= 0 (long only)
+        weight = max(weight, 0.0)
 
-        # Check for valid data
-        if len(close) < max(sma_short_period, sma_long_period) + 1:
-            continue
-        if np.isnan(sma_short.iloc[-1]) or np.isnan(sma_long.iloc[-1]):
-            continue
+        # Calculate stop loss and take profit (optional, only for active positions)
+        sl = None  # Your stop loss logic
+        tp = None  # Your take profit logic
 
-        prev_short = sma_short.iloc[-2]
-        prev_long = sma_long.iloc[-2]
-        curr_short = sma_short.iloc[-1]
-        curr_long = sma_long.iloc[-1]
-        price = close.iloc[-1]
+        if weight > 0:
+            sl = price * (1 - 0.05)  # Example: 5% stop loss
+            tp = price * (1 + 0.10)  # Example: 10% take profit
 
-        # Determine buy/sell signal
-        signal = None
-        if prev_short < prev_long and curr_short > curr_long:
-            signal = 'buy'
-        elif prev_short > prev_long and curr_short < curr_long:
-            signal = 'sell'
-
-        if signal:
-            size = 1
-            if signal == 'buy':
-                entry_price = price
-                preset_take = round(entry_price * (1 + take_profit_ratio), 4)
-                execute_take = round(entry_price * (1 + take_profit_ratio * 0.9), 4)
-                preset_stop = round(entry_price * (1 - stop_loss_ratio), 4)
-                execute_stop = round(entry_price * (1 - stop_loss_ratio * 0.8), 4)
-            else:  # sell
-                entry_price = price
-                preset_take = round(entry_price * (1 - take_profit_ratio), 4)
-                execute_take = round(entry_price * (1 - take_profit_ratio * 0.9), 4)
-                preset_stop = round(entry_price * (1 + stop_loss_ratio), 4)
-                execute_stop = round(entry_price * (1 + stop_loss_ratio * 0.8), 4)
-
-            result[symbol] = {
-                "size": str(size),
-                "presetTakeProfitPrice": str(preset_take),
-                "executeTakeProfitPrice": str(execute_take),
-                "presetStopLossPrice": str(preset_stop),
-                "executeStopLossPrice": str(execute_stop)
-            }
+        # [FIXED] Return format (SPOT)
+        result[symbol] = {
+            "weight": weight,
+            "presetTakeProfitPrice": tp,
+            "presetStopLossPrice": sl,
+        }
 
     return result
 ```
 
 ---
 
-## 🧱 Strategy Verify Test Example
+## Part 2: Configuration File (`config.yaml`)
 
+### Configuration Structure
+
+```yaml
+version: "2.0"
+
+# =============================================================================
+# SYSTEM - Common Settings
+# =============================================================================
+system:
+  trade_type: spot                       # [Required] futures | spot
+  trade_env: backtest                    # [Required] backtest | live
+  rebalancing_interval_hours: 8          # [Required] Rebalancing interval (hours). Fraction allowed: "5/60" = 5min
+  # leverage: 5                          # [futures only] Not used for spot trading
+  tz_str: "Asia/Seoul"                   # Timezone (default: UTC)
+
+# =============================================================================
+# STRATEGY - Strategy Settings
+# =============================================================================
+strategy:
+  name: your_strategy_name               # [Required] Strategy name (must match filename)
+  assets:                                # [Required] Trading assets (must end with USDT)
+    - BTCUSDT
+    - ETHUSDT
+    - XRPUSDT
+  frequency: "15m"                       # [Required] Data frequency: 1m | 5m | 15m | 1d
+
+  # [OPTIONAL] Custom parameters - structure is completely flexible
+  # You can define any nested structure that fits your strategy needs.
+  # Examples:
+  #   config:
+  #     window: 180
+  #     rsi_period: 14
+  #   OR
+  #   params:
+  #     indicators: {sma: 20, ema: 50}
+  #     thresholds: {buy: 30, sell: 70}
+
+# =============================================================================
+# BACKTEST - Backtest Only (Required when trade_env: backtest)
+# =============================================================================
+backtest:
+  data_apikey: "YOUR_DATA_API_KEY"       # [Required] Data API key
+  start_date: "2025-10-01 09:00"         # [Required] Start datetime
+  end_date: "2025-10-10 08:59"           # [Required] End datetime
+  lookback_bars: 220                     # [Required] SEE BELOW: must be >= max window/period used in strategy
+  initial_capital: 10000                 # [Required] Initial capital (USD)
+  generate_report: true                  # Generate Pyfolio report (default: true)
+
+# =============================================================================
+# LIVE - Live Trading Only (Required when trade_env: live)
+# =============================================================================
+# live:
+#   trading_hours: 720                   # Operating hours. 720 = 30 days
+#   data_apikey: "YOUR_API_KEY"
+#
+#   # --- Futures settings (when trade_type: futures) ---
+#   futures:
+#     total_allocation: 0.8              # Capital allocation ratio (0~1)
+#     margin_mode: crossed               # crossed
+#     pos_mode: hedge_mode               # hedge_mode
+#
+#   # --- Spot settings (when trade_type: spot) ---
+#   spot:
+#     quote_coin: usdt                   # Quote currency (default: usdt)
+#     total_allocation: 0.8              # Capital allocation ratio (0~1)
+```
+
+> **Note:** The `config.yaml` structure is shared across futures and spot. The `trade_type` field determines which mode is active. For spot, `leverage` is not used. The `live` section uses the corresponding sub-key (`futures:` or `spot:`) based on `trade_type`.
+
+### How Config is Passed to Strategy
+
+The `config_dict` parameter in the strategy function receives all keys under `strategy:` section:
 ```python
-# 1. strategy.py: Contains the strategy function above
-
-# 2. strategy-config.py
-strategy_config = {
-        "sma_short": 30,
-        "sma_long": 60,
-        "take_profit_ratio": 0.02,
-        "stop_loss_ratio": 0.01
-    }
-
-# 3. verify-strategy.ipynb
-import strategy   # Your strategy file
-import config     # Your config file
-
-df = pd.read_csv('sample_data.csv')
-results = strategy.strategy(df, {"strategy_config": config.strategy_config})
+config_dict = {
+    "name": "your_strategy_name",             # [Required] From strategy.name
+    "assets": ["BTCUSDT", "ETHUSDT", ...],    # [Required] From strategy.assets
+    "frequency": "15m",                        # [Required] From strategy.frequency
+    # ... any other custom keys you define under strategy: section
+}
 ```
 
-# ✅ Expected Output Format
-```
-{'BTCUSDT': {'size': '0.7',
-  'presetTakeProfitPrice': None,
-  'executeTakeProfitPrice': None,
-  'presetStopLossPrice': None,
-  'executeStopLossPrice': None},
- 'ETHUSDT': {'size': '0.3',
-  'presetTakeProfitPrice': None,
-  'executeTakeProfitPrice': None,
-  'presetStopLossPrice': None,
-  'executeStopLossPrice': None}}
+**Important:** The structure under `strategy:` is flexible. Only `name`, `assets`, and `frequency` are required.
+Any additional keys you define will be passed directly to `config_dict`.
+
+**DO NOT copy the example structure (base/position/sltp).** Design your own parameter structure based on your strategy's needs. Examples:
+```yaml
+# Simple flat structure (example values - customize for your strategy)
+strategy:
+  name: my_strategy
+  assets: [BTCUSDT, ETHUSDT]
+  frequency: "15m"
+  your_param_1: ...                      # Define your own parameters
+  your_param_2: ...
+
+# Or nested structure (example values - customize for your strategy)
+strategy:
+  name: my_strategy
+  assets: [BTCUSDT]
+  frequency: "15m"
+  your_section:
+    param_a: ...
+    param_b: ...
 ```
 
 ---
 
-## ❓Tips
+### CRITICAL: lookback_bars Calculation
 
-- The `df` is provided automatically by the system
-- You must return results as **lists**
-- For more complex strategies, you can build on the logic of this template
+**Rule:** `lookback_bars` must be greater than or equal to the maximum historical data required by your strategy.
 
+```
+lookback_bars >= max(all window/period values used in strategy) + buffer (10~20%)
+```
+
+**When is historical data needed?**
+
+| Case | Example | Required lookback_bars |
+|------|---------|----------------------|
+| `get_history(window=N)` call | `get_history(assets, window=200, ...)` | >= 200 |
+| Moving Average | `talib.SMA(close, 50)` | >= 50 |
+| RSI calculation | `talib.RSI(close, 14)` | >= 14 |
+| Combined usage | `get_history(200)` then `SMA(50)` | >= 200 |
+
+**Calculation Example:**
+
+If your strategy uses:
+- `get_history(window=200)`
+- `talib.SMA(close, 20)` (short SMA)
+- `talib.SMA(close, 50)` (long SMA)
+- `talib.RSI(close, 14)`
+
+Then:
+```
+max(200, 20, 50, 14) = 200
+lookback_bars = 200 + buffer = 220 (recommended)
+```
+
+**Error when lookback_bars is too small:**
+```
+History window extends before YYYY-MM-DD. To use this history window,
+start the backtest on or after YYYY-MM-DD.
+```
+**Solution:** Increase `lookback_bars` to be >= the window requested in your strategy.
 
 ---
 
-# 🛠 Sample config.py Template
+## Complete Example: RSI Mean Reversion Strategy (Spot)
 
-Here’s a minimal example of what your `config.py` should look like:
+**Note:** This is just ONE example with example values. Design your own parameter names, structure, and values based on YOUR strategy logic. Do NOT copy these values blindly.
+
+### File: `rsi_mean_reversion.py`
 
 ```python
-# config.py
-# ==========================
-# Required System Settings
-# ==========================
+"""
+RSI Mean Reversion Strategy (Spot - Long Only)
+- Buy when RSI < oversold threshold (long entry)
+- Sell (weight=0) when RSI > overbought threshold (no short in spot)
+"""
 
-system_config = {
-    "data_apikey": "Input User Data Api Key", # CoinAPI - data api key
-    "strategy_name": "multi_period_momentum", # User strategy file name
-    "trading_hours": 72, # System run time
-    "base_symbol": "BTCUSDT",
-    "symbols": ['BTCUSDT', 'ETHUSDT', 'XRPUSDT', 'BCHUSDT', 'LTCUSDT', 
-                'ADAUSDT', 'ETCUSDT', 'TRXUSDT', 'DOTUSDT', 'DOGEUSDT', 
-                'SOLUSDT', 'BNBUSDT', 'ICPUSDT', 'FILUSDT', 'XLMUSDT',
-                'ONTUSDT', 'QTUMUSDT', 'NKNUSDT', 'AVAXUSDT', 'CELOUSDT',
-                'WAXPUSDT', 'DYMUSDT', 'APTUSDT', 'FLOWUSDT', 'GTCUSDT',
-                'SEIUSDT', 'ATOMUSDT', 'NEARUSDT', 'STXUSDT', 'MINAUSDT',
-                'BSVUSDT', 'EGLDUSDT', 'RVNUSDT', 'ONEUSDT', 'NEOUSDT',
-                'JUPUSDT', 'ZILUSDT', 'XTZUSDT', 'LUNCUSDT', 'CKBUSDT',
-                'IOTAUSDT', 'THETAUSDT', 'ICXUSDT', 'ALGOUSDT', 'LSKUSDT', 
-                'CFXUSDT', 'TONUSDT', 'MEMEUSDT', 'SXPUSDT', 'KASUSDT',
-                'HBARUSDT', 'IOSTUSDT', 'BEAMUSDT', 'FETUSDT', 'XVGUSDT', 
-                'SUIUSDT', 'VETUSDT', 'KSMUSDT', 'ARBUSDT', 'ARUSDT', 
-                'RUNEUSDT', 'IOTXUSDT', 'TAIKOUSDT', 'COREUSDT', 'BBUSDT', 
-                'COTIUSDT', 'NTRNUSDT'], # List of all currently available symbols: define only the symbols you need as values.
-    "productType": "usdt-futures",
-    "posMode": "hedge_mode", # one_way_mode , hedge_mode
-    "marginMode": "crossed", # Margin mode: crossed (isolated requires holdSide in hedge_mode)
-    "holdSide": "long",      # Position direction: long (used only in isolated + hedge_mode)   
-    "marginCoin": "usdt",
-    "orderType": "market",
-    "timeframe": "1min",
-    "tradeType": "future",
-    "is_portfolio": True,   
-    "total_allocation": 1.0, # Proportion of total assets to use
-    "leverage": 10,          # Leverage
-    "new_data_window": 60,   # The window value for fetching the latest data (preferably the maximum value of the strategy parameter)
-    "weight_method": "custom", # equal(1/n), split(long: 0.5 --> 1/n | short: 0.5 --> 1/n), custom(custom_weights)
-    "custom_weights": {        # Required if weight_method is custom
-        "BTCUSDT" : "0.5",
-        "ETHUSDT" : "0.3",
-        "XRPUSDT" : "0.2"
-    }    
-}
-
-# ==========================
-# Rebalancing Trade Parameters
-# ==========================
-
-rebalancing_config = {
-    "rebalancing_interval_hours": 3, # Rebalancing cycle (hours)
-    "minimum_candidates": 0
-}
+from module.data_context import DataContext
+import talib
+import numpy as np
 
 
-# ==========================
-# Strategy Parameter Settings
-# ==========================
+def strategy(context: DataContext, config_dict: dict) -> dict:
 
-hours = 12
-strategy_config = {
-    "maximum_candidates": 5,
-    "minutes": 60 * hours
-}
+    # [FIXED] Required parameters
+    assets = config_dict['assets']
+    frequency = config_dict.get("frequency", "1m")
+
+    # [CUSTOM] Your own parameter names - design based on YOUR strategy
+    # Default values below are examples only
+    window = config_dict.get("window", 100)           # example default
+    rsi_period = config_dict.get("rsi_period", 14)    # example default
+    oversold = config_dict.get("oversold", 30)        # example default
+    overbought = config_dict.get("overbought", 70)    # example default
+    stop_loss_pct = config_dict.get("stop_loss_pct", 0.02)    # example default
+    take_profit_pct = config_dict.get("take_profit_pct", 0.04) # example default
+
+    # [FIXED] Get historical data
+    hist = context.get_history(
+        assets=assets,
+        window=window,
+        frequency=frequency,
+        fields=["close"]
+    )
+
+    if hist.empty:
+        return {}
+
+    df = hist["close"].unstack(level=0)
+    latest_prices = df.iloc[-1]
+
+    result = {}
+    num_assets = len(assets)
+
+    for symbol in assets:
+        close_array = df[symbol].values
+        rsi = talib.RSI(close_array, timeperiod=rsi_period)
+        current_rsi = rsi[-1]
+        price = latest_prices[symbol]
+
+        if np.isnan(current_rsi):
+            weight = 0.0
+            sl, tp = None, None
+        elif current_rsi < oversold:
+            weight = 0.3  # Long (example weight - customize based on your strategy)
+            sl = price * (1 - stop_loss_pct)
+            tp = price * (1 + take_profit_pct)
+        elif current_rsi > overbought:
+            # SPOT: Cannot short - hold cash instead (weight = 0)
+            weight = 0.0
+            sl, tp = None, None
+        else:
+            weight = 0.0
+            sl, tp = None, None
+
+        result[symbol] = {
+            "weight": weight,
+            "presetTakeProfitPrice": tp,
+            "presetStopLossPrice": sl,
+        }
+
+    return result
 ```
 
-✅ strategy_config is automatically passed to your strategy function by the system.
+### File: `config.yaml`
+
+```yaml
+version: "2.0"
+
+system:
+  trade_type: spot                         # futures | spot
+  trade_env: backtest
+  rebalancing_interval_hours: 4            # (example)
+  # leverage: 5                            # [futures only] Not used for spot
+  tz_str: "Asia/Seoul"                     # (example)
+
+strategy:
+  name: rsi_mean_reversion
+  assets:                                  # (example assets)
+    - BTCUSDT
+    - ETHUSDT
+    - XRPUSDT
+  frequency: "15m"
+
+  # Custom parameters - ALL VALUES BELOW ARE EXAMPLES
+  window: 100                              # (example)
+  rsi_period: 14                           # (example)
+  oversold: 30                             # (example)
+  overbought: 70                           # (example)
+  stop_loss_pct: 0.02                      # (example)
+  take_profit_pct: 0.04                    # (example)
+
+backtest:
+  data_apikey: "YOUR_DATA_API_KEY"
+  start_date: "2025-10-01 09:00"           # (example)
+  end_date: "2025-10-15 08:59"             # (example)
+  lookback_bars: 120                       # (example) >= window + buffer
+  initial_capital: 10000                   # (example)
+  generate_report: true
+
+# live:
+#   trading_hours: 720
+#   data_apikey: "YOUR_API_KEY"
+#   futures:                               # [futures only]
+#     total_allocation: 0.8
+#     margin_mode: crossed
+#     pos_mode: hedge_mode
+#   spot:                                  # [spot only]
+#     quote_coin: usdt
+#     total_allocation: 0.8
+```
+
+---
+
+## Output Format Requirements
+
+When generating code, provide output in this exact format:
+
+### File: `{strategy_name}.py`
+
+```python
+# Full content of the strategy file
+```
+
+### File: `config.yaml`
+
+```yaml
+# Full content of the configuration file
+```
+
+### [OPTIONAL] File: `common/{module_name}.py`
+
+Generate common modules when reusable utilities would benefit the strategy.
+
+```python
+# Full content of the common module
+# Example: common/indicators.py, common/signals.py, common/utils.py
+```
+
+**Common Module Guidelines:**
+- Each module should have a **single responsibility** (indicators, signals, position sizing, etc.)
+- Include **docstrings** for each function explaining inputs/outputs
+- Use **type hints** for better code clarity
+- Module must be **self-contained** (no dependencies on strategy-specific code)
+
+**Example common module structure:**
+```python
+"""
+Custom Indicators Module
+Reusable technical indicator functions for trading strategies.
+"""
+
+import numpy as np
+import talib
+
+
+def weighted_rsi(close: np.ndarray, period: int, weight: float) -> np.ndarray:
+    """
+    Example: Calculate weighted RSI.
+    This is just an example function - create your own based on your strategy needs.
+
+    Args:
+        close: Array of closing prices
+        period: RSI period
+        weight: Weight multiplier
+
+    Returns:
+        Weighted RSI values
+    """
+    rsi = talib.RSI(close, timeperiod=period)
+    return rsi * weight
+```
+
+---
+
+## Your Strategy Idea
+
+**Describe your strategy below:**
+
+(Example prompts you can use:)
+- "Create a simple moving average crossover strategy that buys when SMA 20 crosses above SMA 50"
+- "Implement RSI-based mean reversion: buy when RSI < 30, sell when RSI > 70"
+- "Build a volatility breakout strategy using Bollinger Bands - buy on lower band touch"
+- "Create a momentum strategy that allocates to top-performing assets"
+
+---
+
+Now generate the complete Python code and YAML configuration for my strategy.

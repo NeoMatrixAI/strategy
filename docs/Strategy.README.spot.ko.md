@@ -1,0 +1,689 @@
+# 현물 전략 개발 가이드 - AI 프롬프트
+
+> **거래 유형: 현물 (Spot)**
+>
+> 이 README는 여러 언어로 제공됩니다:
+> - [English (default)](../spot/README.md)
+> - Korean - 이 파일
+> - [Chinese](Strategy.README.spot.zh-CN.md)
+
+---
+
+> 이 README 전체를 복사하여 Claude, GPT, Gemini 또는 다른 AI 어시스턴트에 붙여넣으세요.
+> 그 후 전략 아이디어를 설명하면 AI가 이 시스템에 호환되는 코드를 생성합니다.
+
+---
+
+## AI 지시사항
+
+당신은 전문 트레이딩 시스템 어시스턴트입니다.
+아래의 필수 구조를 엄격히 따르는 파일을 생성해야 합니다:
+
+**필수 파일:**
+1. **`{strategy_name}.py`** - 전략 로직 파일
+2. **`config.yaml`** - 설정 파일
+
+**선택 파일 (유용할 때 생성):**
+3. **`common/{module_name}.py`** - 재사용 가능한 유틸리티 모듈
+
+사용자가 전략 아이디어, 지표, 매매 로직을 제공하면 고정된 템플릿 안에 구현해야 합니다.
+
+### Common 모듈 생성 시점
+
+다음 경우에 `common/` 폴더에 별도 모듈을 생성하세요:
+- **여러 전략에서 재사용** 가능한 로직 (지표, 시그널 생성기, 포지션 사이징)
+- 관심사 분리로 **가독성이 향상**되는 코드 (예: 복잡한 계산)
+- **독립적인 유틸리티** 함수 (예: 커스텀 지표, 데이터 변환기)
+
+**Common 모듈을 생성하지 말아야 할 경우:**
+- 재사용되지 않을 전략 특화 로직
+- 단순한 한 줄 계산
+- 설정이나 상수 (config.yaml에 유지)
+
+---
+
+## 현물 거래 규칙 (중요)
+
+**이 시스템은 현물 거래용입니다. 다음 제약 조건을 반드시 준수해야 합니다:**
+
+1. **롱 전용** - 현물 거래는 공매도가 불가능합니다. 모든 weight는 >= 0이어야 합니다.
+2. **레버리지 없음** - 현물 거래는 레버리지를 사용하지 않습니다.
+3. **Weight = 0은 매도** - weight를 0으로 설정하거나 심볼을 생략하면 보유 전량이 매도됩니다.
+4. **익절가 필드** - `presetTakeProfitPrice`를 사용하세요 (선물용인 `presetStopSurplusPrice`가 아님).
+
+---
+
+## 시스템 아키텍처 개요
+
+```
+strategy/
+├── common/                        # 공유 모듈 (필요시 생성)
+│   └── {module_name}.py           # 예: indicators.py, signals.py, utils.py
+└── spot/
+    └── {strategy_name}/           # 전략 폴더 (이름 = 전략명)
+        ├── {strategy_name}.py     # 전략 로직 (파일명은 폴더명과 일치해야 함)
+        └── config.yaml            # 설정 파일
+```
+
+**Common 모듈 import 경로:**
+```python
+from common.{module_name} import your_function
+# 예시: from common.indicators import custom_rsi
+```
+
+---
+
+## 필수 패키지 버전 (중요)
+
+**반드시 아래 정확한 패키지 버전과 호환되는 코드를 작성해야 합니다.**
+시스템은 백테스팅과 실거래 모두에서 이 버전들을 사용합니다.
+
+| 패키지 | 버전 | 용도 |
+|--------|------|------|
+| pandas | 1.5.3 | DataFrame 처리 |
+| numpy | 1.24.4 | 수치 연산 |
+| ta-lib | 0.4.30 | 기술적 지표 (RSI, MACD, SMA, EMA 등) |
+| scipy | 1.10.1 | 통계/수학 함수 |
+
+### TA-Lib 사용 예시
+
+```python
+import talib
+import numpy as np
+
+# pandas Series를 TA-Lib용 numpy 배열로 변환
+close_array = df["close"].values
+
+# 단순 이동평균
+sma_20 = talib.SMA(close_array, timeperiod=20)
+
+# 지수 이동평균
+ema_12 = talib.EMA(close_array, timeperiod=12)
+
+# RSI (상대강도지수)
+rsi = talib.RSI(close_array, timeperiod=14)
+
+# MACD
+macd, macd_signal, macd_hist = talib.MACD(close_array, fastperiod=12, slowperiod=26, signalperiod=9)
+
+# 볼린저 밴드
+upper, middle, lower = talib.BBANDS(close_array, timeperiod=20, nbdevup=2, nbdevdn=2)
+
+# ATR (평균진정범위) - high, low, close 필요
+atr = talib.ATR(high_array, low_array, close_array, timeperiod=14)
+
+# 스토캐스틱
+slowk, slowd = talib.STOCH(high_array, low_array, close_array,
+                           fastk_period=14, slowk_period=3, slowd_period=3)
+```
+
+### 중요 호환성 참고사항
+
+1. **pandas 1.5.3**: 위치 인덱싱은 `.iloc[]`, 라벨 인덱싱은 `.loc[]` 사용
+2. **numpy 1.24.4**: `np.NaN`은 deprecated, `np.nan` 사용
+3. **ta-lib 0.4.30**: 입력은 pandas Series가 아닌 numpy 배열이어야 함 (`.values` 사용)
+4. **scipy 1.10.1**: 고급 통계 계산에 사용 가능
+
+---
+
+## Part 1: 전략 파일 (`{strategy_name}.py`)
+
+### 고정 규칙 (반드시 준수)
+
+1. **함수 이름**은 반드시 `strategy`
+2. **함수 시그니처**는 정확히 다음과 같아야 함:
+```python
+def strategy(context: DataContext, config_dict: dict) -> dict:
+```
+
+3. **필수 import**:
+```python
+from module.data_context import DataContext
+```
+
+4. **선택적 imports** (common 폴더에서 - 사용자 업로드 모듈):
+```python
+from common.your_module import your_function
+```
+
+### 데이터 요청 API
+
+```python
+# [FIXED] 과거 OHLCV 데이터 조회
+hist = context.get_history(
+    assets=assets,           # 심볼 리스트, 예: ["BTCUSDT", "ETHUSDT"]
+    window=window,           # 조회 기간 (봉 개수)
+    frequency=frequency,     # "1m" | "5m" | "15m" | "1d"
+    fields=["close"]         # 선택: ["open", "high", "low", "close", "volume"]
+)
+```
+
+### 데이터 형식 (MultiIndex DataFrame)
+
+`hist` DataFrame은 `["asset", "datetime"]` 레벨의 MultiIndex를 가집니다:
+
+```
+                                        open      high      low     close    volume
+asset    datetime
+BTCUSDT  2025-11-13 04:01:00+00:00    100.0    100.2     99.7    100.0    37215.0
+         2025-11-13 04:02:00+00:00    100.0    100.5     99.8    100.3    42156.0
+ETHUSDT  2025-11-13 04:01:00+00:00    105.1    105.1    104.7    105.0    74304.2
+         2025-11-13 04:02:00+00:00    105.0    105.3    104.9    105.2    68421.5
+```
+
+**일반적인 데이터 처리 패턴:**
+```python
+# 단일 컬럼을 DataFrame으로 변환 (자산이 컬럼, datetime이 인덱스)
+df = hist["close"].unstack(level=0)
+
+# 결과:
+#                            BTCUSDT   ETHUSDT
+# datetime
+# 2025-11-13 04:01:00+00:00   100.0    105.0
+# 2025-11-13 04:02:00+00:00   100.3    105.2
+
+# 최신 가격 조회
+latest_prices = df.iloc[-1]
+```
+
+### 반환 형식 (반드시 준수 - 현물)
+
+```python
+{
+    "SYMBOL": {
+        "weight": float,                  # >= 0이어야 함 (롱 전용, 공매도 불가)
+        "presetTakeProfitPrice": float,   # 익절가 (None 가능)
+        "presetStopLossPrice": float      # 손절가 (None 가능)
+    }
+}
+```
+
+**선택적 추가 TP/SL 필드 (고급 제어용):**
+```python
+{
+    "SYMBOL": {
+        "weight": float,
+        "presetTakeProfitPrice": float,
+        "presetStopLossPrice": float,
+        "executeTakeProfitPrice": float,    # 선택: 익절 실행가
+        "executeStopLossPrice": float       # 선택: 손절 실행가
+    }
+}
+```
+
+**Weight 규칙 (현물 - 롱 전용):**
+- **모든 weight는 >= 0이어야 함** (현물 거래는 공매도 불가)
+- **weight = 0**은 포지션 없음 / 보유 중이면 전량 매도
+- 반환 dict에서 **심볼을 생략**하면 보유 중인 경우 전량 매도됨
+- **모든 weight의 합은 1.0을 초과할 수 없음**: `sum(weight) <= 1.0`
+- 각 weight는 해당 심볼에 할당된 자본 비율을 나타냄
+
+**반환 예시:**
+```python
+return {
+    "BTCUSDT": {"weight": 0.5, "presetTakeProfitPrice": 105000.0, "presetStopLossPrice": 98000.0},
+    "ETHUSDT": {"weight": 0.3, "presetTakeProfitPrice": 4200.0, "presetStopLossPrice": 3500.0},
+    "XRPUSDT": {"weight": 0.2, "presetTakeProfitPrice": None, "presetStopLossPrice": None}
+}
+```
+
+### 전략 파일 템플릿
+
+```python
+"""
+{Strategy Name}
+
+=== 고정값 (변경 불가) ===
+
+1. Import 경로
+   - from common.xxx import ... (FIXED)
+   - 서버는 업로드된 모듈 파일을 위해 사용자별 common 폴더 사용
+
+2. 함수 시그니처
+   - def strategy(context: DataContext, config_dict: dict) -> dict (FIXED)
+
+3. Config 접근
+   - assets = config_dict['assets'] (FIXED)
+   - frequency = config_dict.get("frequency", "1m") (FIXED)
+   - 기타 config_dict 파라미터는 전략별 커스텀
+
+4. History API
+   - context.get_history(assets=, window=, frequency=, fields=) (FIXED)
+   - fields: ohlcv에서 필요한 컬럼 리스트 (예: ["close"], ["open", "high", "low", "close"])
+   - 반환: MultiIndex DataFrame (asset, datetime)
+
+5. 반환 형식 (FIXED - 현물)
+   {
+       "SYMBOL": {
+           "weight": float,              # >= 0, 롱 전용, 합계 <= 1.0
+           "presetTakeProfitPrice": float, # None 가능
+           "presetStopLossPrice": float    # None 가능
+       }
+   }
+"""
+
+# [FIXED] Import: from module.data_context
+from module.data_context import DataContext
+
+# [OPTIONAL] common 폴더에서 커스텀 모듈 import
+# from common.your_module import your_function
+
+import pandas as pd
+import numpy as np
+
+
+# [FIXED] def strategy(context: DataContext, config_dict: dict) -> dict
+def strategy(context: DataContext, config_dict: dict) -> dict:
+
+    # [FIXED] config_dict에서 assets, frequency
+    assets = config_dict['assets']
+    frequency = config_dict.get("frequency", "1m")
+
+    # [CUSTOM] config에서 전략 특화 파라미터
+    # 중첩 config 접근 예: config_dict['config']['your_section']['param']
+    # 예시:
+    # base_config = config_dict['config']['base']
+    # window = base_config.get("window", 180)
+
+    # [FIXED] context.get_history(assets=, window=, frequency=, fields=)
+    # 반환: OHLCV 컬럼을 가진 MultiIndex DataFrame (asset, datetime)
+    hist = context.get_history(
+        assets=assets,
+        window=window,  # config에서 (예시: 100)
+        frequency=frequency,
+        fields=["close"]  # 필요한 필드만 선택
+    )
+
+    if hist.empty:
+        return {}
+
+    # === 여기에 전략 로직 구현 ===
+
+    # 예시: 자산을 컬럼으로 하는 DataFrame으로 변환
+    df = hist["close"].unstack(level=0)
+    latest_prices = df.iloc[-1]
+
+    # 시그널과 weight 계산...
+    weights = {}  # weight 계산 로직
+
+    # 결과 생성
+    result = {}
+    for symbol in assets:
+        weight = weights.get(symbol, 0.0)
+        price = latest_prices[symbol]
+
+        # 현물: weight는 >= 0이어야 함 (롱 전용)
+        weight = max(weight, 0.0)
+
+        # 손절/익절 계산 (선택사항, 활성 포지션에만 적용)
+        sl = None  # 손절 로직
+        tp = None  # 익절 로직
+
+        if weight > 0:
+            sl = price * (1 - 0.05)  # 예시: 5% 손절
+            tp = price * (1 + 0.10)  # 예시: 10% 익절
+
+        # [FIXED] 반환 형식 (현물)
+        result[symbol] = {
+            "weight": weight,
+            "presetTakeProfitPrice": tp,
+            "presetStopLossPrice": sl,
+        }
+
+    return result
+```
+
+---
+
+## Part 2: 설정 파일 (`config.yaml`)
+
+### 설정 구조
+
+```yaml
+version: "2.0"
+
+# =============================================================================
+# SYSTEM - 공통 설정
+# =============================================================================
+system:
+  trade_type: spot                     # [Required] futures | spot
+  trade_env: backtest                  # [Required] backtest | live
+  rebalancing_interval_hours: 8        # [Required] 리밸런싱 간격 (시간). 분수 허용: "5/60" = 5분
+  tz_str: "Asia/Seoul"                 # 타임존 (기본값: UTC)
+  # leverage: 5                          # [futures 전용] 현물 거래에서는 사용하지 않음
+
+# =============================================================================
+# STRATEGY - 전략 설정
+# =============================================================================
+strategy:
+  name: your_strategy_name               # [Required] 전략명 (파일명과 일치해야 함)
+  assets:                                # [Required] 거래 자산 (USDT로 끝나야 함)
+    - BTCUSDT
+    - ETHUSDT
+    - XRPUSDT
+  frequency: "15m"                       # [Required] 데이터 주기: 1m | 5m | 15m | 1d
+
+  # [OPTIONAL] 커스텀 파라미터 - 구조는 완전히 자유
+  # 전략 필요에 맞는 어떤 중첩 구조든 정의 가능
+  # 예시:
+  #   config:
+  #     window: 180
+  #     rsi_period: 14
+  #   또는
+  #   params:
+  #     indicators: {sma: 20, ema: 50}
+  #     thresholds: {buy: 30, sell: 70}
+
+# =============================================================================
+# BACKTEST - 백테스트 전용 (trade_env: backtest일 때 필수)
+# =============================================================================
+backtest:
+  data_apikey: "YOUR_DATA_API_KEY"       # [Required] 데이터 API 키
+  start_date: "2025-10-01 09:00"         # [Required] 시작 일시
+  end_date: "2025-10-10 08:59"           # [Required] 종료 일시
+  lookback_bars: 220                     # [Required] 아래 참조: 전략에서 사용하는 최대 window/period 이상이어야 함
+  initial_capital: 10000                 # [Required] 초기 자본 (USD)
+  generate_report: true                  # Pyfolio 리포트 생성 (기본값: true)
+
+# =============================================================================
+# LIVE - 실거래 전용 (trade_env: live일 때 필수)
+# =============================================================================
+# live:
+#   trading_hours: 720                   # 운영 시간. 720 = 30일
+#   data_apikey: "YOUR_API_KEY"
+#
+#   # --- 선물 설정 (trade_type: futures일 때) ---
+#   futures:                             # [futures 전용]
+#     total_allocation: 0.8
+#     margin_mode: crossed
+#     pos_mode: hedge_mode
+#
+#   # --- 현물 설정 (trade_type: spot일 때) ---
+#   spot:                                # [spot 전용]
+#     quote_coin: usdt
+#     total_allocation: 0.8
+```
+
+> **참고:** `config.yaml` 구조는 선물과 현물에서 공통으로 사용됩니다. `trade_type` 필드가 어떤 모드가 활성화되는지 결정합니다. 현물의 경우 `leverage`는 사용하지 않습니다. `live` 섹션은 `trade_type`에 따라 해당 하위 키(`futures:` 또는 `spot:`)를 사용합니다.
+
+### Config가 전략에 전달되는 방식
+
+전략 함수의 `config_dict` 파라미터는 `strategy:` 섹션 아래의 모든 키를 받습니다:
+```python
+config_dict = {
+    "name": "your_strategy_name",             # [Required] strategy.name에서
+    "assets": ["BTCUSDT", "ETHUSDT", ...],    # [Required] strategy.assets에서
+    "frequency": "15m",                        # [Required] strategy.frequency에서
+    # ... strategy: 섹션에 정의한 다른 모든 커스텀 키
+}
+```
+
+**중요:** `strategy:` 아래 구조는 자유롭습니다. `name`, `assets`, `frequency`만 필수입니다.
+정의한 추가 키들은 `config_dict`에 직접 전달됩니다.
+
+**예시 구조를 그대로 복사하지 마세요.** 전략 필요에 맞게 자신만의 파라미터 구조를 설계하세요. 예시:
+```yaml
+# 단순 평면 구조 (예시 값 - 전략에 맞게 커스터마이즈)
+strategy:
+  name: my_strategy
+  assets: [BTCUSDT, ETHUSDT]
+  frequency: "15m"
+  your_param_1: ...                      # 자신만의 파라미터 정의
+  your_param_2: ...
+
+# 또는 중첩 구조 (예시 값 - 전략에 맞게 커스터마이즈)
+strategy:
+  name: my_strategy
+  assets: [BTCUSDT]
+  frequency: "15m"
+  your_section:
+    param_a: ...
+    param_b: ...
+```
+
+---
+
+### 중요: lookback_bars 계산
+
+**규칙:** `lookback_bars`는 전략이 필요로 하는 최대 과거 데이터 이상이어야 합니다.
+
+```
+lookback_bars >= max(전략에서 사용하는 모든 window/period 값) + 버퍼 (10~20%)
+```
+
+**언제 과거 데이터가 필요한가?**
+
+| 경우 | 예시 | 필요한 lookback_bars |
+|------|------|---------------------|
+| `get_history(window=N)` 호출 | `get_history(assets, window=200, ...)` | >= 200 |
+| 이동평균 | `talib.SMA(close, 50)` | >= 50 |
+| RSI 계산 | `talib.RSI(close, 14)` | >= 14 |
+| 복합 사용 | `get_history(200)` 후 `SMA(50)` | >= 200 |
+
+**계산 예시:**
+
+전략이 다음을 사용하는 경우:
+- `get_history(window=200)`
+- `talib.SMA(close, 20)` (단기 SMA)
+- `talib.SMA(close, 50)` (장기 SMA)
+- `talib.RSI(close, 14)`
+
+그러면:
+```
+max(200, 20, 50, 14) = 200
+lookback_bars = 200 + 버퍼 = 220 (권장)
+```
+
+**lookback_bars가 너무 작을 때 오류:**
+```
+History window extends before YYYY-MM-DD. To use this history window,
+start the backtest on or after YYYY-MM-DD.
+```
+**해결:** `lookback_bars`를 전략에서 요청하는 window 이상으로 늘리세요.
+
+---
+
+## 완전한 예시: RSI 평균회귀 전략 (현물)
+
+**참고:** 이것은 예시 값을 가진 하나의 예시일 뿐입니다. 당신의 전략 로직에 맞게 자신만의 파라미터 이름, 구조, 값을 설계하세요. 이 값들을 그대로 복사하지 마세요.
+
+### 파일: `rsi_mean_reversion.py`
+
+```python
+"""
+RSI 평균회귀 전략 (현물 - 롱 전용)
+- RSI < 과매도 임계값일 때 매수 (롱 진입)
+- RSI > 과매수 임계값일 때 매도 (현물에서는 공매도 불가, weight = 0)
+"""
+
+from module.data_context import DataContext
+import talib
+import numpy as np
+
+
+def strategy(context: DataContext, config_dict: dict) -> dict:
+
+    # [FIXED] 필수 파라미터
+    assets = config_dict['assets']
+    frequency = config_dict.get("frequency", "1m")
+
+    # [CUSTOM] 자신만의 파라미터명 - 전략에 맞게 설계
+    # 아래 기본값은 예시일 뿐
+    window = config_dict.get("window", 100)           # 예시 기본값
+    rsi_period = config_dict.get("rsi_period", 14)    # 예시 기본값
+    oversold = config_dict.get("oversold", 30)        # 예시 기본값
+    overbought = config_dict.get("overbought", 70)    # 예시 기본값
+    stop_loss_pct = config_dict.get("stop_loss_pct", 0.02)    # 예시 기본값
+    take_profit_pct = config_dict.get("take_profit_pct", 0.04) # 예시 기본값
+
+    # [FIXED] 과거 데이터 조회
+    hist = context.get_history(
+        assets=assets,
+        window=window,
+        frequency=frequency,
+        fields=["close"]
+    )
+
+    if hist.empty:
+        return {}
+
+    df = hist["close"].unstack(level=0)
+    latest_prices = df.iloc[-1]
+
+    result = {}
+    num_assets = len(assets)
+
+    for symbol in assets:
+        close_array = df[symbol].values
+        rsi = talib.RSI(close_array, timeperiod=rsi_period)
+        current_rsi = rsi[-1]
+        price = latest_prices[symbol]
+
+        if np.isnan(current_rsi):
+            weight = 0.0
+            sl, tp = None, None
+        elif current_rsi < oversold:
+            weight = 0.3  # 롱 (예시 weight - 전략에 맞게 커스터마이즈)
+            sl = price * (1 - stop_loss_pct)
+            tp = price * (1 + take_profit_pct)
+        elif current_rsi > overbought:
+            # 현물: 공매도 불가 - 현금 보유 (weight = 0)
+            weight = 0.0
+            sl, tp = None, None
+        else:
+            weight = 0.0
+            sl, tp = None, None
+
+        result[symbol] = {
+            "weight": weight,
+            "presetTakeProfitPrice": tp,
+            "presetStopLossPrice": sl,
+        }
+
+    return result
+```
+
+### 파일: `config.yaml`
+
+```yaml
+version: "2.0"
+
+system:
+  trade_type: spot                         # futures | spot
+  trade_env: backtest
+  rebalancing_interval_hours: 4            # (예시)
+  tz_str: "Asia/Seoul"                     # (예시)
+  # leverage: 5                            # [futures 전용] 현물에서는 사용 안함
+
+strategy:
+  name: rsi_mean_reversion
+  assets:                                  # (예시 자산)
+    - BTCUSDT
+    - ETHUSDT
+    - XRPUSDT
+  frequency: "15m"
+
+  # 커스텀 파라미터 - 아래 모든 값은 예시임
+  window: 100                              # (예시)
+  rsi_period: 14                           # (예시)
+  oversold: 30                             # (예시)
+  overbought: 70                           # (예시)
+  stop_loss_pct: 0.02                      # (예시)
+  take_profit_pct: 0.04                    # (예시)
+
+backtest:
+  data_apikey: "YOUR_DATA_API_KEY"
+  start_date: "2025-10-01 09:00"           # (예시)
+  end_date: "2025-10-15 08:59"             # (예시)
+  lookback_bars: 120                       # (예시) >= window + 버퍼
+  initial_capital: 10000                   # (예시)
+  generate_report: true
+
+# live:
+#   trading_hours: 720
+#   data_apikey: "YOUR_API_KEY"
+#   futures:                               # [futures 전용]
+#     total_allocation: 0.8
+#     margin_mode: crossed
+#     pos_mode: hedge_mode
+#   spot:                                  # [spot 전용]
+#     quote_coin: usdt
+#     total_allocation: 0.8
+```
+
+---
+
+## 출력 형식 요구사항
+
+코드 생성 시 정확히 다음 형식으로 출력하세요:
+
+### 파일: `{strategy_name}.py`
+
+```python
+# 전략 파일의 전체 내용
+```
+
+### 파일: `config.yaml`
+
+```yaml
+# 설정 파일의 전체 내용
+```
+
+### [선택] 파일: `common/{module_name}.py`
+
+재사용 가능한 유틸리티가 전략에 도움이 될 때 common 모듈을 생성하세요.
+
+```python
+# common 모듈의 전체 내용
+# 예시: common/indicators.py, common/signals.py, common/utils.py
+```
+
+**Common 모듈 가이드라인:**
+- 각 모듈은 **단일 책임**을 가져야 함 (지표, 시그널, 포지션 사이징 등)
+- 각 함수에 입출력을 설명하는 **docstring** 포함
+- 코드 명확성을 위해 **type hints** 사용
+- 모듈은 **독립적**이어야 함 (전략 특화 코드에 의존하지 않음)
+
+**Common 모듈 구조 예시:**
+```python
+"""
+커스텀 지표 모듈
+트레이딩 전략을 위한 재사용 가능한 기술적 지표 함수.
+"""
+
+import numpy as np
+import talib
+
+
+def weighted_rsi(close: np.ndarray, period: int, weight: float) -> np.ndarray:
+    """
+    예시: 가중 RSI 계산.
+    이것은 예시 함수일 뿐 - 전략 필요에 맞게 자신만의 함수를 만드세요.
+
+    Args:
+        close: 종가 배열
+        period: RSI 기간
+        weight: 가중치 승수
+
+    Returns:
+        가중 RSI 값
+    """
+    rsi = talib.RSI(close, timeperiod=period)
+    return rsi * weight
+```
+
+---
+
+## 나의 전략 아이디어
+
+**아래에 전략을 설명하세요:**
+
+(사용 가능한 예시 프롬프트:)
+- "20일과 50일 SMA를 사용한 단순 이동평균 크로스오버 전략을 만들어주세요"
+- "RSI 기반 평균회귀 구현: RSI < 30이면 매수, RSI > 70이면 매도"
+- "볼린저 밴드를 사용한 변동성 돌파 전략 - 하단 밴드 터치 시 매수"
+- "상위 성과 자산에 배분하는 모멘텀 전략을 만들어주세요"
+
+---
+
+이제 나의 전략에 대한 완전한 Python 코드와 YAML 설정을 생성하세요.

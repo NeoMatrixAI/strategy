@@ -105,8 +105,8 @@ def strategy(context: DataContext, config_dict: dict) -> dict:
 我们还提供现货和期货策略模块的创建和设置指南，即使是初学者也可以轻松上手。
 
 - 📘 更多信息，请参阅以下每种交易类型的指南。
-  - [现货策略指南](../spot/README.md)
-  - [期货策略指南](../futures/README.md)
+  - [现货策略指南](../spot/README.md) - 现货交易（仅做多，无杠杆）
+  - [期货策略指南](../futures/README.md) - 期货交易（做多/做空，支持杠杆）
 
 > 逐步讲解 `strategy()` 函数的编写方法、输入/输出格式、所需结构、设置方法以及示例代码。
 
@@ -117,7 +117,9 @@ def strategy(context: DataContext, config_dict: dict) -> dict:
 您可以使用Claude、GPT、Gemini等AI助手轻松创建策略。
 
 **使用方法：**
-1. 复制[期货策略指南](../futures/README.md)的全部内容
+1. 复制您交易类型对应的策略指南全部内容：
+   - [期货策略指南](../futures/README.md) - 期货交易（做多/做空，支持杠杆）
+   - [现货策略指南](../spot/README.md) - 现货交易（仅做多，无杠杆）
 2. 粘贴到您的AI助手（Claude、GPT、Gemini等）
 3. 用自然语言描述您的策略想法
 4. AI将生成兼容的 `{strategy_name}.py` 和 `config.yaml` 文件

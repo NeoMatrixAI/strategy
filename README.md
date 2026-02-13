@@ -122,7 +122,9 @@ We also provide guides for creating spot and futures strategy modules and settin
 You can easily create strategies using AI assistants like Claude, GPT, or Gemini.
 
 **How to use:**
-1. Copy the entire contents of [Futures Strategy Guide](./futures/README.md)
+1. Copy the entire contents of the strategy guide for your trading type:
+   - [Futures Strategy Guide](./futures/README.md) - for futures trading (long/short, leverage)
+   - [Spot Strategy Guide](./spot/README.md) - for spot trading (long only, no leverage)
 2. Paste it into your AI assistant (Claude, GPT, Gemini, etc.)
 3. Describe your strategy idea in natural language
 4. The AI will generate compatible `{strategy_name}.py` and `config.yaml` files

@@ -1,9 +1,11 @@
-# Strategy Development Guide - AI Prompt
+# Futures Strategy Development Guide - AI Prompt
 
+> **Trade Type: Futures**
+>
 > This README is available in multiple languages:
 > - English (default) - this file
-> - [Korean](docs/Strategy.README.ko.md)
-> - [Chinese](docs/Strategy.README.zh-CN.md)
+> - [Korean](../docs/Strategy.README.futures.ko.md)
+> - [Chinese](../docs/Strategy.README.futures.zh-CN.md)
 
 ---
 
@@ -37,6 +39,17 @@ Create separate modules in the `common/` folder when:
 - Strategy-specific logic that won't be reused
 - Simple one-liner calculations
 - Configuration or constants (keep in config.yaml)
+
+---
+
+## Futures Trading Rules (CRITICAL)
+
+**This system is for FUTURES trading. The following constraints MUST be followed:**
+
+1. **Long and Short** - Futures trading supports both long (positive weight) and short (negative weight) positions.
+2. **Leverage** - Futures trading uses leverage, configured in `system.leverage`.
+3. **Weight rules** - Sum of absolute values must NOT exceed 1.0: `sum(|weight|) <= 1.0`.
+4. **Take Profit field** - Use `presetStopSurplusPrice` (NOT `presetTakeProfitPrice` which is for spot).
 
 ---
 
@@ -315,7 +328,7 @@ system:
   trade_type: futures                    # [Required] futures | spot
   trade_env: backtest                    # [Required] backtest | live
   rebalancing_interval_hours: 8          # [Required] Rebalancing interval (example: 8). Fraction allowed: "5/60" = 5min
-  leverage: 5                            # Leverage (example: 5)
+  leverage: 5                            # [futures only] Leverage (example: 5). Ignored for spot.
   tz_str: "Asia/Seoul"                   # Timezone (example: Asia/Seoul, default: UTC)
 
 # =============================================================================
@@ -358,15 +371,19 @@ backtest:
 #   trading_hours: 720                   # Operating hours. 720 = 30 days
 #   data_apikey: "YOUR_API_KEY"
 #
-#   futures:                             # When trade_type: futures
+#   # --- Futures settings (when trade_type: futures) ---
+#   futures:
 #     total_allocation: 0.8              # Capital allocation ratio (0~1)
 #     margin_mode: crossed               # crossed
 #     pos_mode: hedge_mode               # hedge_mode
 #
-#   spot:                                # When trade_type: spot
-#     quote_coin: usdt
-#     total_allocation: 0.8
+#   # --- Spot settings (when trade_type: spot) ---
+#   spot:
+#     quote_coin: usdt                   # Quote currency (default: usdt)
+#     total_allocation: 0.8              # Capital allocation ratio (0~1)
 ```
+
+> **Note:** The `config.yaml` structure is shared across futures and spot. The `trade_type` field determines which mode is active. For futures, set `leverage`; for spot, omit it. The `live` section uses the corresponding sub-key (`futures:` or `spot:`) based on `trade_type`.
 
 ### How Config is Passed to Strategy
 
@@ -531,35 +548,46 @@ def strategy(context: DataContext, config_dict: dict) -> dict:
 version: "2.0"
 
 system:
-  trade_type: futures
+  trade_type: futures                      # futures | spot
   trade_env: backtest
-  rebalancing_interval_hours: 4          # (example)
-  leverage: 5                            # (example)
-  tz_str: "Asia/Seoul"                   # (example)
+  rebalancing_interval_hours: 4            # (example)
+  leverage: 5                              # (example) [futures only]
+  tz_str: "Asia/Seoul"                     # (example)
 
 strategy:
   name: rsi_mean_reversion
-  assets:                                # (example assets)
+  assets:                                  # (example assets)
     - BTCUSDT
     - ETHUSDT
     - XRPUSDT
   frequency: "15m"
 
   # Custom parameters - ALL VALUES BELOW ARE EXAMPLES
-  window: 100                            # (example)
-  rsi_period: 14                         # (example)
-  oversold: 30                           # (example)
-  overbought: 70                         # (example)
-  stop_loss_pct: 0.02                    # (example)
-  take_profit_pct: 0.04                  # (example)
+  window: 100                              # (example)
+  rsi_period: 14                           # (example)
+  oversold: 30                             # (example)
+  overbought: 70                           # (example)
+  stop_loss_pct: 0.02                      # (example)
+  take_profit_pct: 0.04                    # (example)
 
 backtest:
   data_apikey: "YOUR_DATA_API_KEY"
-  start_date: "2025-10-01 09:00"         # (example)
-  end_date: "2025-10-15 08:59"           # (example)
-  lookback_bars: 120                     # (example) >= window + buffer
-  initial_capital: 10000                 # (example)
+  start_date: "2025-10-01 09:00"           # (example)
+  end_date: "2025-10-15 08:59"             # (example)
+  lookback_bars: 120                       # (example) >= window + buffer
+  initial_capital: 10000                   # (example)
   generate_report: true
+
+# live:
+#   trading_hours: 720
+#   data_apikey: "YOUR_API_KEY"
+#   futures:                               # [futures only]
+#     total_allocation: 0.8
+#     margin_mode: crossed
+#     pos_mode: hedge_mode
+#   spot:                                  # [spot only]
+#     quote_coin: usdt
+#     total_allocation: 0.8
 ```
 
 ---
